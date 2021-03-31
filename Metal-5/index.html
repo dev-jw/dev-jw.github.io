@@ -1,0 +1,262 @@
+<!doctype html><html lang=zh-cn><head prefix="og: http://ogp.me/ns# article: http://ogp.me/ns/article#"><meta charset=utf-8><meta name=generator content="Hugo 0.82.0"><meta name=theme-color content="#fff"><meta name=viewport content="width=device-width,initial-scale=1"><meta name=format-detection content="telephone=no, date=no, address=no, email=no"><meta http-equiv=cache-control content="no-transform"><meta http-equiv=cache-control content="no-siteapp"><title>Metal系列-加载纹理 | Dev - jw</title><link rel=stylesheet href=../css/meme.min.ae509b8259cb6c090411be6371211f6bb00631055ec9b68a994f27bb5f5f5f76.css><script src=../js/meme.min.3a56ecbb4ec7b23a805fc0116d4dac9095813dfd877cd8379675a8bdac538ffe.js></script><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400;1,700&family=Noto+Serif+SC:wght@400;500;700&family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap" media=print onload="this.media='all'"><noscript><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400;1,700&family=Noto+Serif+SC:wght@400;500;700&family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap"></noscript><meta name=author content="Dev - jw"><meta name=description content="之前我们已经对顶点缓冲对象 MTLBuffer 有了简单的了解和使用。 加载纹理对象，我们需要借助 MTLTexture 在 Metal 中……"><link rel="shortcut icon" href=../favicon.ico type=image/x-icon><link rel=mask-icon href=../icons/safari-pinned-tab.svg color=#2a6df4><link rel=apple-touch-icon sizes=180x180 href=../icons/apple-touch-icon.png><meta name=apple-mobile-web-app-capable content="yes"><meta name=apple-mobile-web-app-title content="Dev - jw"><meta name=apple-mobile-web-app-status-bar-style content="black"><meta name=mobile-web-app-capable content="yes"><meta name=application-name content="Dev - jw"><meta name=msapplication-starturl content="../"><meta name=msapplication-TileColor content="#fff"><meta name=msapplication-TileImage content="../icons/mstile-150x150.png"><link rel=manifest href=../manifest.json><link rel=canonical href=https://dev.hjw.best/Metal-5/><script type=application/ld+json>{"@context":"https://schema.org","@type":"WebPage","datePublished":"2020-08-25T14:51:40+08:00","dateModified":"2021-03-31T15:42:56+08:00","url":"https://dev.hjw.best/Metal-5/","name":"Metal系列-加载纹理","description":"之前我们已经对顶点缓冲对象 MTLBuffer 有了简单的了解和使用。 加载纹理对象，我们需要借助 MTLTexture 在 Metal 中……","image":"https://dev.hjw.best/favicon.ico","license":"Copyright","publisher":{"@type":"Organization","name":"Dev - jw","logo":{"@type":"ImageObject","url":"https://dev.hjw.best/favicon.ico"},"url":"https://dev.hjw.best/"},"mainEntityOfPage":{"@type":"WebSite","@id":"https://dev.hjw.best/"}}</script><meta name=twitter:card content="summary"><meta property="og:title" content="Metal系列-加载纹理"><meta property="og:description" content="之前我们已经对顶点缓冲对象 MTLBuffer 有了简单的了解和使用。 加载纹理对象，我们需要借助 MTLTexture 在 Metal 中……"><meta property="og:url" content="https://dev.hjw.best/Metal-5/"><meta property="og:site_name" content="Dev - jw"><meta property="og:locale" content="zh"><meta property="og:image" content="https://dev.hjw.best/favicon.ico"><meta property="og:type" content="website"><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=Lato:wght@700&text=reuixiy&display=swap" media=print onload="this.media='all'"><noscript><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=Lato:wght@700&text=reuixiy&display=swap"></noscript><meta name=baidu-site-verification content="5nzYjT6RG7"></head><body><div class=container><header class=header><div class=header-wrapper><div class="header-inner single"><div class=site-brand><a href=../ class=brand>Dev - jw</a></div><nav class=nav><ul class=menu id=menu><li class=menu-item><a href=../about><span class=menu-item-name>关于</span></a></li><li class=menu-item><a id=theme-switcher href=#><span class="icon theme-icon-light">🌞</span><span class="icon theme-icon-dark">🌙</span></a></li></ul></nav></div></div><input type=checkbox id=nav-toggle aria-hidden=true>
+<label for=nav-toggle class=nav-toggle></label><label for=nav-toggle class=nav-curtain></label></header><main class="main single" id=main><div class=main-inner><article class="content post h-entry" data-align=default data-type=posts data-toc-num=true><h1 class="post-title p-name">Metal系列-加载纹理</h1><div class=post-meta><time datetime=2020-08-25T14:51:40+08:00 class="post-meta-item published dt-published"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="icon post-meta-icon"><path d="M148 288h-40c-6.6.0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v40c0 6.6-5.4 12-12 12zm108-12v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm96 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm-96 96v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm-96 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm192 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm96-260v352c0 26.5-21.5 48-48 48H48c-26.5.0-48-21.5-48-48V112c0-26.5 21.5-48 48-48h48V12c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v52h128V12c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v52h48c26.5.0 48 21.5 48 48zm-48 346V160H48v298c0 3.3 2.7 6 6 6h340c3.3.0 6-2.7 6-6z"/></svg>&nbsp;2020-08-25</time></div><div class="post-body e-content"><blockquote><p>之前我们已经对顶点缓冲对象 <code>MTLBuffer</code> 有了简单的了解和使用。</p><p>加载纹理对象，我们需要借助 <code>MTLTexture</code></p></blockquote><p>在 Metal 中，<code>MTLBuffer</code> 可以用来传递一些未格式化的信息，例如顶点坐标、纹理坐标等；<code>MTLTexture</code>可以用来传递图像信息。</p><h4 id=mtltexture><a href=#mtltexture class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>MTLTexture</h4><p><code>MTLTexture</code>对象是保存格式化后的图片数据的对象，用于向 Metal 程序传递图像信息。</p><p><strong>创建</strong></p><p>根据<code>MTLTextureDescriptor</code>纹理描述符对象，创建<code>MTLTexture</code>纹理对象</p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=c1>// 创建纹理描述符
+</span><span class=c1></span><span class=n>MTLTextureDescriptor</span> <span class=o>*</span><span class=n>textureDescriptor</span> <span class=o>=</span> <span class=p>[[</span><span class=n>MTLTextureDescriptor</span> <span class=n>alloc</span><span class=p>]</span> <span class=n>init</span><span class=p>];</span>
+<span class=c1>// 设置像素颜色格式
+</span><span class=c1></span><span class=n>textureDescriptor</span><span class=p>.</span><span class=n>pixelFormat</span> <span class=o>=</span> <span class=n>MTLPixelFormatRGBA8Unorm</span><span class=p>;</span>
+<span class=c1>// 设置纹理的像素尺寸
+</span><span class=c1></span><span class=n>textureDescriptor</span><span class=p>.</span><span class=n>width</span> <span class=o>=</span> <span class=n>image</span><span class=p>.</span><span class=n>size</span><span class=p>.</span><span class=n>width</span><span class=p>;</span>
+<span class=n>textureDescriptor</span><span class=p>.</span><span class=n>height</span> <span class=o>=</span> <span class=n>image</span><span class=p>.</span><span class=n>size</span><span class=p>.</span><span class=n>height</span><span class=p>;</span>
+<span class=c1>// 使用纹理描述符创建纹理
+</span><span class=c1></span><span class=n>_texture</span> <span class=o>=</span> <span class=p>[</span><span class=n>_device</span> <span class=nl>newTextureWithDescriptor</span><span class=p>:</span><span class=n>textureDescriptor</span><span class=p>];</span>
+</code></pre></div><h4 id=加载纹理><a href=#加载纹理 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>加载纹理</h4><p><strong>加载图像数据</strong></p><ul><li>加载 <code>TGA</code> 图片(参考<a href=https://developer.apple.com/documentation/metal/creating_and_sampling_textures target=_blank rel=noopener>官方文档</a>)</li></ul><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=p>-</span> <span class=p>(</span><span class=kt>void</span><span class=p>)</span><span class=nf>setupTexture</span> <span class=p>{</span>
+    
+<span class=c1>//    1、获取TGA文件路径 --- TGA文件解压
+</span><span class=c1></span>    <span class=n>NSURL</span> <span class=o>*</span><span class=n>imageFileLocation</span> <span class=o>=</span> <span class=p>[[</span><span class=n>NSBundle</span> <span class=n>mainBundle</span><span class=p>]</span> <span class=nl>URLForResource</span><span class=p>:</span><span class=s>@&#34;circle&#34;</span> <span class=nl>withExtension</span><span class=p>:</span><span class=s>@&#34;tga&#34;</span><span class=p>];</span>
+    <span class=c1>//将tag文件-&gt;TGAImage
+</span><span class=c1></span>    <span class=n>TGAImage</span> <span class=o>*</span><span class=n>image</span> <span class=o>=</span> <span class=p>[[</span><span class=n>TGAImage</span> <span class=n>alloc</span><span class=p>]</span> <span class=nl>initWithTGAFileAtLocation</span><span class=p>:</span><span class=n>imageFileLocation</span><span class=p>];</span>
+    <span class=c1>//判断图片是否转换成功
+</span><span class=c1></span>    <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=n>image</span><span class=p>)</span> <span class=p>{</span>
+        <span class=n>NSLog</span><span class=p>(</span><span class=s>@&#34;Failed to create the image from:%@&#34;</span><span class=p>,</span><span class=n>imageFileLocation</span><span class=p>.</span><span class=n>absoluteString</span><span class=p>);</span>
+        <span class=k>return</span><span class=p>;</span>
+    <span class=p>}</span>
+    
+<span class=c1>//    2、创建纹理描述对象 &amp; 设置属性 --- CJLImage --&gt; 纹理（即位图变成纹理对象）
+</span><span class=c1></span>    <span class=n>MTLTextureDescriptor</span> <span class=o>*</span><span class=n>textureDescriptor</span> <span class=o>=</span> <span class=p>[[</span><span class=n>MTLTextureDescriptor</span> <span class=n>alloc</span><span class=p>]</span> <span class=n>init</span><span class=p>];</span>
+    <span class=c1>//表示每个像素有蓝色,绿色,红色和alpha通道.其中每个通道都是8位无符号归一化的值.(即0映射成0,255映射成1);
+</span><span class=c1></span>    <span class=c1>//位图信息
+</span><span class=c1></span>    <span class=n>textureDescriptor</span><span class=p>.</span><span class=n>pixelFormat</span> <span class=o>=</span> <span class=n>MTLPixelFormatBGRA8Unorm</span><span class=p>;</span>
+    <span class=c1>//设置纹理的像素尺寸，即纹理的分辨率
+</span><span class=c1></span>    <span class=n>textureDescriptor</span><span class=p>.</span><span class=n>width</span> <span class=o>=</span> <span class=n>image</span><span class=p>.</span><span class=n>width</span><span class=p>;</span>
+    <span class=n>textureDescriptor</span><span class=p>.</span><span class=n>height</span> <span class=o>=</span> <span class=n>image</span><span class=p>.</span><span class=n>height</span><span class=p>;</span>
+    
+<span class=c1>//    3、创建纹理对象：使用描述符从设备中创建纹理
+</span><span class=c1></span>    <span class=n>_texture</span> <span class=o>=</span> <span class=p>[</span><span class=n>_device</span> <span class=nl>newTextureWithDescriptor</span><span class=p>:</span><span class=n>textureDescriptor</span><span class=p>];</span>
+    <span class=c1>//计算图像每行的字节数
+</span><span class=c1></span>    <span class=n>NSUInteger</span> <span class=n>bytesPerRow</span> <span class=o>=</span> <span class=mi>4</span> <span class=o>*</span> <span class=n>image</span><span class=p>.</span><span class=n>width</span><span class=p>;</span>
+    
+<span class=c1>//    4、创建MTLRegion结构体
+</span><span class=c1></span>    <span class=cm>/*
+</span><span class=cm>     typedef struct
+</span><span class=cm>     {
+</span><span class=cm>     MTLOrigin origin; //开始位置x,y,z
+</span><span class=cm>     MTLSize   size; //尺寸width,height,depth
+</span><span class=cm>     } MTLRegion;
+</span><span class=cm>     */</span>
+    <span class=c1>//MLRegion结构用于标识纹理的特定区域。 demo使用图像数据填充整个纹理；因此，覆盖整个纹理的像素区域等于纹理的尺寸。
+</span><span class=c1></span>    <span class=n>MTLRegion</span> <span class=n>region</span> <span class=o>=</span> <span class=p>{</span>
+        <span class=p>{</span><span class=mi>0</span><span class=p>,</span><span class=mi>0</span><span class=p>,</span><span class=mi>0</span><span class=p>},</span>
+        <span class=p>{</span><span class=n>image</span><span class=p>.</span><span class=n>width</span><span class=p>,</span> <span class=n>image</span><span class=p>.</span><span class=n>height</span><span class=p>,</span> <span class=mi>1</span><span class=p>},</span>
+    <span class=p>};</span>
+    
+<span class=c1>//    5、复制图片数据到texture
+</span><span class=c1></span>    <span class=cm>/*
+</span><span class=cm>     将图片复制到纹理0中（即用纹理替换region表示的区域）
+</span><span class=cm>     - (void)replaceRegion:(MTLRegion)region mipmapLevel:(NSUInteger)level withBytes:(const void *)pixelBytes bytesPerRow:(NSUInteger)bytesPerRow;
+</span><span class=cm>     参数1-region：像素区域在纹理中的位置
+</span><span class=cm>     参数2-level：从零开始的值，指定哪个mipmap级别是目标。如果纹理没有mipmap，请使用0。
+</span><span class=cm>     参数3-pixelBytes：指向要复制图片的字节数
+</span><span class=cm>     参数4-bytesPerRow：对于普通或压缩像素格式，源数据行之间的跨度（以字节为单位）。对于压缩像素格式，跨度是从一排块的开头到下一行的开始的字节数。
+</span><span class=cm>     */</span>
+   <span class=p>[</span><span class=n>_texture</span> <span class=nl>replaceRegion</span><span class=p>:</span><span class=n>region</span> <span class=nl>mipmapLevel</span><span class=p>:</span><span class=mi>0</span> <span class=nl>withBytes</span><span class=p>:</span><span class=n>image</span><span class=p>.</span><span class=n>data</span><span class=p>.</span><span class=n>bytes</span> <span class=nl>bytesPerRow</span><span class=p>:</span><span class=n>bytesPerRow</span><span class=p>];</span>
+<span class=p>}</span>
+
+<span class=c1>// TGAImage.m
+</span><span class=c1></span><span class=p>-</span> <span class=p>(</span><span class=n>nullable</span> <span class=kt>instancetype</span><span class=p>)</span> <span class=nf>initWithTGAFileAtLocation:</span><span class=p>(</span><span class=n>nonnull</span> <span class=n>NSURL</span> <span class=o>*</span><span class=p>)</span><span class=nv>location</span>
+<span class=p>{</span>
+    <span class=nb>self</span> <span class=o>=</span> <span class=p>[</span><span class=nb>super</span> <span class=n>init</span><span class=p>];</span>
+    <span class=k>if</span><span class=p>(</span><span class=nb>self</span><span class=p>)</span>
+    <span class=p>{</span>
+        <span class=n>NSString</span> <span class=o>*</span><span class=n>fileExtension</span> <span class=o>=</span> <span class=n>location</span><span class=p>.</span><span class=n>pathExtension</span><span class=p>;</span>
+        
+        <span class=c1>//判断文件后缀是否为tga
+</span><span class=c1></span>        <span class=k>if</span><span class=p>(</span><span class=o>!</span><span class=p>([</span><span class=n>fileExtension</span> <span class=nl>caseInsensitiveCompare</span><span class=p>:</span><span class=s>@&#34;TGA&#34;</span><span class=p>]</span> <span class=o>==</span> <span class=n>NSOrderedSame</span><span class=p>))</span>
+        <span class=p>{</span>
+            <span class=n>NSLog</span><span class=p>(</span><span class=s>@&#34;此CCImage只加载TGA文件&#34;</span><span class=p>);</span>
+            <span class=k>return</span> <span class=nb>nil</span><span class=p>;</span>
+            
+        <span class=p>}</span>
+        
+        <span class=c1>//定义一个TGA文件的头.
+</span><span class=c1></span>        <span class=k>typedef</span> <span class=k>struct</span> <span class=n>__attribute__</span> <span class=p>((</span><span class=n>packed</span><span class=p>))</span> <span class=n>TGAHeader</span>
+        <span class=p>{</span>
+            <span class=n>uint8_t</span>  <span class=n>IDSize</span><span class=p>;</span>         <span class=c1>// ID信息
+</span><span class=c1></span>            <span class=n>uint8_t</span>  <span class=n>colorMapType</span><span class=p>;</span>   <span class=c1>// 颜色类型
+</span><span class=c1></span>            <span class=n>uint8_t</span>  <span class=n>imageType</span><span class=p>;</span>      <span class=c1>// 图片类型 0=none, 1=indexed, 2=rgb, 3=grey, +8=rle packed
+</span><span class=c1></span>            
+            <span class=n>int16_t</span>  <span class=n>colorMapStart</span><span class=p>;</span>  <span class=c1>// 调色板中颜色映射的偏移量
+</span><span class=c1></span>            <span class=n>int16_t</span>  <span class=n>colorMapLength</span><span class=p>;</span> <span class=c1>// 在调色板的颜色数
+</span><span class=c1></span>            <span class=n>uint8_t</span>  <span class=n>colorMapBpp</span><span class=p>;</span>    <span class=c1>// 每个调色板条目的位数
+</span><span class=c1></span>            
+            <span class=n>uint16_t</span> <span class=n>xOffset</span><span class=p>;</span>        <span class=c1>// 图像开始右方的像素数
+</span><span class=c1></span>            <span class=n>uint16_t</span> <span class=n>yOffset</span><span class=p>;</span>        <span class=c1>// 图像开始向下的像素数
+</span><span class=c1></span>            <span class=n>uint16_t</span> <span class=n>width</span><span class=p>;</span>          <span class=c1>// 像素宽度
+</span><span class=c1></span>            <span class=n>uint16_t</span> <span class=n>height</span><span class=p>;</span>         <span class=c1>// 像素高度
+</span><span class=c1></span>            <span class=n>uint8_t</span>  <span class=n>bitsPerPixel</span><span class=p>;</span>   <span class=c1>// 每像素的位数 8,16,24,32
+</span><span class=c1></span>            <span class=n>uint8_t</span>  <span class=n>descriptor</span><span class=p>;</span>     <span class=c1>// bits描述 (flipping, etc)
+</span><span class=c1></span>            
+        <span class=p>}</span><span class=n>TGAHeader</span><span class=p>;</span>
+        
+        <span class=n>NSError</span> <span class=o>*</span><span class=n>error</span><span class=p>;</span>
+        
+        <span class=c1>//将TGA文件中整个复制到此变量中
+</span><span class=c1></span>        <span class=n>NSData</span> <span class=o>*</span><span class=n>fileData</span> <span class=o>=</span> <span class=p>[[</span><span class=n>NSData</span> <span class=n>alloc</span><span class=p>]</span><span class=nl>initWithContentsOfURL</span><span class=p>:</span><span class=n>location</span> <span class=nl>options</span><span class=p>:</span><span class=mh>0x0</span> <span class=nl>error</span><span class=p>:</span><span class=o>&amp;</span><span class=n>error</span><span class=p>];</span>
+        
+        <span class=k>if</span><span class=p>(</span><span class=n>fileData</span> <span class=o>==</span> <span class=nb>nil</span><span class=p>)</span>
+        <span class=p>{</span>
+            <span class=n>NSLog</span><span class=p>(</span><span class=s>@&#34;打开TGA文件失败:%@&#34;</span><span class=p>,</span><span class=n>error</span><span class=p>.</span><span class=n>localizedDescription</span><span class=p>);</span>
+            <span class=k>return</span> <span class=nb>nil</span><span class=p>;</span>
+        <span class=p>}</span>
+        
+        <span class=c1>//定义TGAHeader对象
+</span><span class=c1></span>        <span class=n>TGAHeader</span> <span class=o>*</span><span class=n>tgaInfo</span> <span class=o>=</span> <span class=p>(</span><span class=n>TGAHeader</span> <span class=o>*</span><span class=p>)</span><span class=n>fileData</span><span class=p>.</span><span class=n>bytes</span><span class=p>;</span>
+        <span class=n>_width</span> <span class=o>=</span> <span class=n>tgaInfo</span><span class=o>-&gt;</span><span class=n>width</span><span class=p>;</span>
+        <span class=n>_height</span> <span class=o>=</span> <span class=n>tgaInfo</span><span class=o>-&gt;</span><span class=n>height</span><span class=p>;</span>
+        
+        <span class=c1>//计算图像数据的字节大小,因为我们把图像数据存储为/每像素32位BGRA数据.
+</span><span class=c1></span>        <span class=n>NSUInteger</span> <span class=n>dataSize</span> <span class=o>=</span> <span class=n>_width</span> <span class=o>*</span> <span class=n>_height</span> <span class=o>*</span> <span class=mi>4</span><span class=p>;</span>
+        
+        <span class=k>if</span><span class=p>(</span><span class=n>tgaInfo</span><span class=o>-&gt;</span><span class=n>bitsPerPixel</span> <span class=o>==</span> <span class=mi>24</span><span class=p>)</span>
+        <span class=p>{</span>
+            <span class=c1>//Metal是不能理解一个24-BPP格式的图像.所以我们必须转化成TGA数据.从24比特BGA格式到32比特BGRA格式.(类似MTLPixelFormatBGRA8Unorm)
+</span><span class=c1></span>            <span class=n>NSMutableData</span> <span class=o>*</span><span class=n>mutableData</span> <span class=o>=</span> <span class=p>[[</span><span class=n>NSMutableData</span> <span class=n>alloc</span><span class=p>]</span> <span class=nl>initWithLength</span><span class=p>:</span><span class=n>dataSize</span><span class=p>];</span>
+            
+            <span class=c1>//TGA规范,图像数据是在标题和ID之后立即设置指针到文件的开头+头的大小+ID的大小.初始化源指针,源代码数据为BGR格式
+</span><span class=c1></span>            <span class=n>uint8_t</span> <span class=o>*</span><span class=n>srcImageData</span> <span class=o>=</span> <span class=p>((</span><span class=n>uint8_t</span><span class=o>*</span><span class=p>)</span><span class=n>fileData</span><span class=p>.</span><span class=n>bytes</span> <span class=o>+</span>
+                                     <span class=k>sizeof</span><span class=p>(</span><span class=n>TGAHeader</span><span class=p>)</span> <span class=o>+</span>
+                                     <span class=n>tgaInfo</span><span class=o>-&gt;</span><span class=n>IDSize</span><span class=p>);</span>
+            
+            <span class=c1>//初始化将存储转换后的BGRA图像数据的目标指针
+</span><span class=c1></span>            <span class=n>uint8_t</span> <span class=o>*</span><span class=n>dstImageData</span> <span class=o>=</span> <span class=n>mutableData</span><span class=p>.</span><span class=n>mutableBytes</span><span class=p>;</span>
+            
+            
+            <span class=c1>//图像的每一行
+</span><span class=c1></span>            <span class=k>for</span><span class=p>(</span><span class=n>NSUInteger</span> <span class=n>y</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>y</span> <span class=o>&lt;</span> <span class=n>_height</span><span class=p>;</span> <span class=n>y</span><span class=o>++</span><span class=p>)</span>
+            <span class=p>{</span>
+                <span class=c1>//对于当前行的每一列
+</span><span class=c1></span>                <span class=k>for</span><span class=p>(</span><span class=n>NSUInteger</span> <span class=n>x</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>x</span> <span class=o>&lt;</span> <span class=n>_width</span><span class=p>;</span> <span class=n>x</span><span class=o>++</span><span class=p>)</span>
+                <span class=p>{</span>
+                    <span class=c1>//计算源和目标图像中正在转换的像素的第一个字节的索引.
+</span><span class=c1></span>                    <span class=n>NSUInteger</span> <span class=n>srcPixelIndex</span> <span class=o>=</span> <span class=mi>3</span> <span class=o>*</span> <span class=p>(</span><span class=n>y</span> <span class=o>*</span> <span class=n>_width</span> <span class=o>+</span> <span class=n>x</span><span class=p>);</span>
+                    <span class=n>NSUInteger</span> <span class=n>dstPixelIndex</span> <span class=o>=</span> <span class=mi>4</span> <span class=o>*</span> <span class=p>(</span><span class=n>y</span> <span class=o>*</span> <span class=n>_width</span> <span class=o>+</span> <span class=n>x</span><span class=p>);</span>
+                    
+                    <span class=c1>//将BGR信道从源复制到目的地,将目标像素的alpha通道设置为255
+</span><span class=c1></span>                    <span class=n>dstImageData</span><span class=p>[</span><span class=n>dstPixelIndex</span> <span class=o>+</span> <span class=mi>0</span><span class=p>]</span> <span class=o>=</span> <span class=n>srcImageData</span><span class=p>[</span><span class=n>srcPixelIndex</span> <span class=o>+</span> <span class=mi>0</span><span class=p>];</span>
+                    <span class=n>dstImageData</span><span class=p>[</span><span class=n>dstPixelIndex</span> <span class=o>+</span> <span class=mi>1</span><span class=p>]</span> <span class=o>=</span> <span class=n>srcImageData</span><span class=p>[</span><span class=n>srcPixelIndex</span> <span class=o>+</span> <span class=mi>1</span><span class=p>];</span>
+                    <span class=n>dstImageData</span><span class=p>[</span><span class=n>dstPixelIndex</span> <span class=o>+</span> <span class=mi>2</span><span class=p>]</span> <span class=o>=</span> <span class=n>srcImageData</span><span class=p>[</span><span class=n>srcPixelIndex</span> <span class=o>+</span> <span class=mi>2</span><span class=p>];</span>
+                    <span class=n>dstImageData</span><span class=p>[</span><span class=n>dstPixelIndex</span> <span class=o>+</span> <span class=mi>3</span><span class=p>]</span> <span class=o>=</span> <span class=mi>255</span><span class=p>;</span>
+                <span class=p>}</span>
+            <span class=p>}</span>
+            <span class=n>_data</span> <span class=o>=</span> <span class=n>mutableData</span><span class=p>;</span>
+            
+        <span class=p>}</span><span class=k>else</span>
+        <span class=p>{</span>
+        
+            <span class=n>uint8_t</span> <span class=o>*</span><span class=n>srcImageData</span> <span class=o>=</span> <span class=p>((</span><span class=n>uint8_t</span><span class=o>*</span><span class=p>)</span><span class=n>fileData</span><span class=p>.</span><span class=n>bytes</span> <span class=o>+</span>
+                                     <span class=k>sizeof</span><span class=p>(</span><span class=n>TGAHeader</span><span class=p>)</span> <span class=o>+</span>
+                                     <span class=n>tgaInfo</span><span class=o>-&gt;</span><span class=n>IDSize</span><span class=p>);</span>
+
+            <span class=n>_data</span> <span class=o>=</span> <span class=p>[[</span><span class=n>NSData</span> <span class=n>alloc</span><span class=p>]</span> <span class=nl>initWithBytes</span><span class=p>:</span><span class=n>srcImageData</span>
+                                           <span class=nl>length</span><span class=p>:</span><span class=n>dataSize</span><span class=p>];</span>
+            
+        <span class=p>}</span>
+        
+    <span class=p>}</span>
+    <span class=k>return</span> <span class=nb>self</span><span class=p>;</span>
+    
+<span class=p>}</span>
+</code></pre></div><ul><li><p>加载 <code>PNG/JPG</code> 图片</p><p>与 TGA 图片加载不同，解压 PNG/JPG 图片可以采用 <code>CoreImage</code> 框架，重绘成位图即可</p></li></ul><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=p>-</span> <span class=p>(</span><span class=kt>void</span><span class=p>)</span><span class=nf>setupTexture</span> <span class=p>{</span>
+    <span class=n>UIImage</span> <span class=o>*</span><span class=n>image</span> <span class=o>=</span> <span class=p>[</span><span class=n>UIImage</span> <span class=nl>imageNamed</span><span class=p>:</span><span class=s>@&#34;wlop.png&#34;</span><span class=p>];</span>
+    
+    <span class=n>MTLTextureDescriptor</span> <span class=o>*</span><span class=n>textureDes</span> <span class=o>=</span> <span class=p>[[</span><span class=n>MTLTextureDescriptor</span> <span class=n>alloc</span><span class=p>]</span> <span class=n>init</span><span class=p>];</span>
+    <span class=n>textureDes</span><span class=p>.</span><span class=n>pixelFormat</span> <span class=o>=</span> <span class=n>MTLPixelFormatRGBA8Unorm</span><span class=p>;</span>
+    <span class=n>textureDes</span><span class=p>.</span><span class=n>width</span>    <span class=o>=</span> <span class=n>image</span><span class=p>.</span><span class=n>size</span><span class=p>.</span><span class=n>width</span><span class=p>;</span>
+    <span class=n>textureDes</span><span class=p>.</span><span class=n>height</span>   <span class=o>=</span> <span class=n>image</span><span class=p>.</span><span class=n>size</span><span class=p>.</span><span class=n>height</span><span class=p>;</span>
+    
+    <span class=n>_texture</span> <span class=o>=</span> <span class=p>[</span><span class=n>_device</span> <span class=nl>newTextureWithDescriptor</span><span class=p>:</span><span class=n>textureDes</span><span class=p>];</span>
+   
+    <span class=n>MTLRegion</span> <span class=n>region</span> <span class=o>=</span> <span class=p>{</span>
+        <span class=p>{</span><span class=mi>0</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>0</span><span class=p>},</span>
+        <span class=p>{</span><span class=n>image</span><span class=p>.</span><span class=n>size</span><span class=p>.</span><span class=n>width</span><span class=p>,</span> <span class=n>image</span><span class=p>.</span><span class=n>size</span><span class=p>.</span><span class=n>height</span><span class=p>,</span> <span class=mi>1</span><span class=p>},</span>
+    <span class=p>};</span>
+    
+    <span class=n>Byte</span> <span class=o>*</span><span class=n>imageBytes</span> <span class=o>=</span> <span class=p>[</span><span class=nb>self</span> <span class=nl>loadImage</span><span class=p>:</span><span class=n>image</span><span class=p>];</span>
+    <span class=n>NSAssert</span><span class=p>(</span><span class=n>imageBytes</span><span class=p>,</span> <span class=s>@&#34;imageBytes load failed&#34;</span><span class=p>);</span>
+
+    <span class=p>[</span><span class=n>_texture</span> <span class=nl>replaceRegion</span><span class=p>:</span><span class=n>region</span>
+                <span class=nl>mipmapLevel</span><span class=p>:</span><span class=mi>0</span>
+                  <span class=nl>withBytes</span><span class=p>:</span><span class=n>imageBytes</span>
+                <span class=nl>bytesPerRow</span><span class=p>:</span><span class=mi>4</span> <span class=o>*</span> <span class=n>image</span><span class=p>.</span><span class=n>size</span><span class=p>.</span><span class=n>width</span><span class=p>];</span>
+    
+    <span class=n>free</span><span class=p>(</span><span class=n>imageBytes</span><span class=p>);</span>
+    <span class=n>imageBytes</span> <span class=o>=</span> <span class=nb>NULL</span><span class=p>;</span>
+<span class=p>}</span>
+
+<span class=p>-</span> <span class=p>(</span><span class=n>Byte</span> <span class=o>*</span><span class=p>)</span><span class=nf>loadImage:</span><span class=p>(</span><span class=n>UIImage</span> <span class=o>*</span><span class=p>)</span><span class=nv>image</span> <span class=p>{</span>
+    <span class=n>CGImageRef</span> <span class=n>imageRef</span> <span class=o>=</span> <span class=n>image</span><span class=p>.</span><span class=n>CGImage</span><span class=p>;</span>
+    <span class=n>NSAssert</span><span class=p>(</span><span class=n>imageRef</span><span class=p>,</span> <span class=s>@&#34;Image load failed&#34;</span><span class=p>);</span>
+    
+    <span class=n>size_t</span> <span class=n>width</span> <span class=o>=</span> <span class=n>CGImageGetWidth</span><span class=p>(</span><span class=n>imageRef</span><span class=p>);</span>
+    <span class=n>size_t</span> <span class=n>height</span> <span class=o>=</span> <span class=n>CGImageGetHeight</span><span class=p>(</span><span class=n>imageRef</span><span class=p>);</span>
+    
+    <span class=n>Byte</span> <span class=o>*</span><span class=n>spriteData</span> <span class=o>=</span> <span class=p>(</span><span class=n>Byte</span><span class=o>*</span><span class=p>)</span><span class=n>calloc</span><span class=p>(</span><span class=n>width</span> <span class=o>*</span> <span class=n>height</span> <span class=o>*</span> <span class=mi>4</span><span class=p>,</span> <span class=k>sizeof</span><span class=p>(</span><span class=n>Byte</span><span class=p>));</span>
+    
+    <span class=n>CGContextRef</span> <span class=n>contextRef</span> <span class=o>=</span> <span class=n>CGBitmapContextCreate</span><span class=p>(</span><span class=n>spriteData</span><span class=p>,</span> <span class=n>width</span><span class=p>,</span> <span class=n>height</span><span class=p>,</span> <span class=mi>8</span><span class=p>,</span> <span class=n>width</span> <span class=o>*</span> <span class=mi>4</span><span class=p>,</span> <span class=n>CGImageGetColorSpace</span><span class=p>(</span><span class=n>imageRef</span><span class=p>),</span> <span class=n>kCGImageAlphaPremultipliedLast</span><span class=p>);</span>
+    
+    <span class=n>CGRect</span> <span class=n>rect</span> <span class=o>=</span> <span class=n>CGRectMake</span><span class=p>(</span><span class=mi>0</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=n>width</span><span class=p>,</span> <span class=n>height</span><span class=p>);</span>
+    <span class=n>CGContextDrawImage</span><span class=p>(</span><span class=n>contextRef</span><span class=p>,</span> <span class=n>rect</span><span class=p>,</span> <span class=n>imageRef</span><span class=p>);</span>
+    <span class=n>CGContextTranslateCTM</span><span class=p>(</span><span class=n>contextRef</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=n>rect</span><span class=p>.</span><span class=n>size</span><span class=p>.</span><span class=n>height</span><span class=p>);</span>
+    <span class=n>CGContextScaleCTM</span><span class=p>(</span><span class=n>contextRef</span><span class=p>,</span> <span class=mf>1.0</span><span class=p>,</span> <span class=o>-</span><span class=mf>1.0</span><span class=p>);</span>
+    <span class=n>CGContextDrawImage</span><span class=p>(</span><span class=n>contextRef</span><span class=p>,</span> <span class=n>rect</span><span class=p>,</span> <span class=n>imageRef</span><span class=p>);</span>
+
+    <span class=n>CGContextRelease</span><span class=p>(</span><span class=n>contextRef</span><span class=p>);</span>
+    <span class=n>CGImageRelease</span><span class=p>(</span><span class=n>imageRef</span><span class=p>);</span>
+    
+    <span class=k>return</span> <span class=n>spriteData</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div><p><strong>将纹理复制到 MTLTexture 对象</strong></p><p><code>replaceRegion: mipmapLevel: withBytes: bytesPerRow:</code></p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=c1>// MTLRegion 结构体用于标识纹理的特定区域
+</span><span class=c1></span><span class=n>MTLRegion</span> <span class=n>region</span> <span class=o>=</span> <span class=p>{</span>
+    <span class=p>{</span><span class=mi>0</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>0</span><span class=p>},</span>
+    <span class=p>{</span><span class=n>image</span><span class=p>.</span><span class=n>size</span><span class=p>.</span><span class=n>width</span><span class=p>,</span> <span class=n>image</span><span class=p>.</span><span class=n>size</span><span class=p>.</span><span class=n>height</span><span class=p>,</span> <span class=mi>1</span><span class=p>},</span>
+<span class=p>};</span>
+<span class=cm>/*
+</span><span class=cm>  将图片复制到纹理0中（即用纹理替换region表示的区域）
+</span><span class=cm>  - (void)replaceRegion:(MTLRegion)region mipmapLevel:(NSUInteger)level withBytes:(const void *)pixelBytes bytesPerRow:(NSUInteger)bytesPerRow;
+</span><span class=cm>  参数1-region：像素区域在纹理中的位置
+</span><span class=cm>  参数2-level：从零开始的值，指定哪个mipmap级别是目标。如果纹理没有mipmap，请使用0。
+</span><span class=cm>  参数3-pixelBytes：指向要复制图片的字节数
+</span><span class=cm>  参数4-bytesPerRow：对于普通或压缩像素格式，源数据行之间的跨度（以字节为单位）。对于压缩像素格式，跨度是从一排块的开头到下一行的开始的字节数。
+</span><span class=cm> */</span>
+<span class=p>[</span><span class=n>_texture</span> <span class=nl>replaceRegion</span><span class=p>:</span><span class=n>region</span>
+            <span class=nl>mipmapLevel</span><span class=p>:</span><span class=mi>0</span>
+              <span class=nl>withBytes</span><span class=p>:</span><span class=n>imageBytes</span>
+            <span class=nl>bytesPerRow</span><span class=p>:</span><span class=mi>4</span> <span class=o>*</span> <span class=n>image</span><span class=p>.</span><span class=n>size</span><span class=p>.</span><span class=n>width</span><span class=p>];</span>
+</code></pre></div><p><strong>传递图像数据</strong></p><p>通过命令编码器，将当前纹理对象传递到 Metal 程序的片段函数中</p><p><code>[commandEncoder setFragmentTexture:_texture atIndex:TextureIndexBaseColor]</code></p><h4 id=shader-处理><a href=#shader-处理 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>Shader 处理</h4><p>顶点函数与之前 OpenGL ES 加载纹理一样，之比之前传入的参数是变量，而 Metal 接收的是结构体，返回的也可以是结构体</p><div class=highlight><pre class=chroma><code class=language-c++ data-lang=c++><span class=k>typedef</span> <span class=k>struct</span>
+<span class=p>{</span>
+    <span class=n>float4</span> <span class=n>clipSpacePosition</span> <span class=na>[[position]]</span><span class=p>;</span> <span class=c1>// position的修饰符表示这个是顶点
+</span><span class=c1></span>    
+    <span class=n>float2</span> <span class=n>textureCoordinate</span><span class=p>;</span> <span class=c1>// 纹理坐标，会做插值处理
+</span><span class=c1></span>    
+<span class=p>}</span> <span class=n>RasterizerData</span><span class=p>;</span>
+
+<span class=n>vertex</span> <span class=n>RasterizerData</span> <span class=c1>// 返回给片元着色器的结构体
+</span><span class=c1></span><span class=n>vertexShader</span><span class=p>(</span><span class=n>uint</span> <span class=n>vertexID</span> <span class=na>[[ vertex_id ]]</span><span class=p>,</span> <span class=c1>// vertex_id是顶点shader每次处理的index，用于定位当前的顶点
+</span><span class=c1></span>             <span class=n>constant</span> <span class=n>Vertex</span> <span class=o>*</span><span class=n>vertexArray</span> <span class=na>[[ buffer(0) ]]</span><span class=p>)</span> <span class=p>{</span> <span class=c1>// buffer表明是缓存数据，0是索引
+</span><span class=c1></span>    <span class=n>RasterizerData</span> <span class=n>out</span><span class=p>;</span>
+    <span class=n>out</span><span class=p>.</span><span class=n>clipSpacePosition</span> <span class=o>=</span> <span class=n>vertexArray</span><span class=p>[</span><span class=n>vertexID</span><span class=p>].</span><span class=n>position</span><span class=p>;</span>
+    <span class=n>out</span><span class=p>.</span><span class=n>textureCoordinate</span> <span class=o>=</span> <span class=n>vertexArray</span><span class=p>[</span><span class=n>vertexID</span><span class=p>].</span><span class=n>textureCoordinate</span><span class=p>;</span>
+    <span class=k>return</span> <span class=n>out</span><span class=p>;</span>
+<span class=p>}</span>
+
+<span class=n>fragment</span> <span class=n>float4</span>
+<span class=nf>samplingShader</span><span class=p>(</span><span class=n>RasterizerData</span> <span class=n>input</span> <span class=na>[[stage_in]]</span><span class=p>,</span> <span class=c1>// stage_in表示这个数据来自光栅化。（光栅化是顶点处理之后的步骤，业务层无法修改）
+</span><span class=c1></span>               <span class=n>texture2d</span><span class=o>&lt;</span><span class=n>half</span><span class=o>&gt;</span> <span class=n>colorTexture</span> <span class=p>[[</span> <span class=n>texture</span><span class=p>(</span><span class=mi>0</span><span class=p>)</span> <span class=p>]])</span> <span class=c1>// texture表明是纹理数据，0是索引
+</span><span class=c1></span><span class=p>{</span>
+    <span class=k>constexpr</span> <span class=n>sampler</span> <span class=n>textureSampler</span> <span class=p>(</span><span class=n>mag_filter</span><span class=o>::</span><span class=n>linear</span><span class=p>,</span>
+                                      <span class=n>min_filter</span><span class=o>::</span><span class=n>linear</span><span class=p>);</span> <span class=c1>// sampler是采样器
+</span><span class=c1></span>    
+    <span class=n>half4</span> <span class=n>colorSample</span> <span class=o>=</span> <span class=n>colorTexture</span><span class=p>.</span><span class=n>sample</span><span class=p>(</span><span class=n>textureSampler</span><span class=p>,</span> <span class=n>input</span><span class=p>.</span><span class=n>textureCoordinate</span><span class=p>);</span> <span class=c1>// 得到纹理对应位置的颜色
+</span><span class=c1></span>    
+    <span class=k>return</span> <span class=n>float4</span><span class=p>(</span><span class=n>colorSample</span><span class=p>);</span>
+<span class=p>}</span>
+</code></pre></div><h4 id=总结><a href=#总结 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>总结</h4><p>Metal 的图片加载和 OpenGL ES非常的相似，核心关键是：</p><ul><li>纹理图像解压成位图</li><li>将位图信息存储到<code>MTLTexture</code>对象</li><li>在绘制时，将 <code>MTLTexure</code> 对象传递到 Metal 着色器程序的片段函数</li><li>片段函数设置采样器，获取纹理对应位置的颜色值</li></ul><p><a href=https://github.com/dev-jw/learning-metal target=_blank rel=noopener>完整代码获取</a></p></div></article><div class=post-tags><a href=../tags/metal/ rel=tag class=post-tags-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon tag-icon"><path d="M0 252.118V48C0 21.49 21.49.0 48 0h204.118a48 48 0 0133.941 14.059l211.882 211.882c18.745 18.745 18.745 49.137.0 67.882L293.823 497.941c-18.745 18.745-49.137 18.745-67.882.0L14.059 286.059A48 48 0 010 252.118zM112 64c-26.51.0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48z"/></svg>Metal</a>
+<a href=../tags/ios/ rel=tag class=post-tags-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon tag-icon"><path d="M0 252.118V48C0 21.49 21.49.0 48 0h204.118a48 48 0 0133.941 14.059l211.882 211.882c18.745 18.745 18.745 49.137.0 67.882L293.823 497.941c-18.745 18.745-49.137 18.745-67.882.0L14.059 286.059A48 48 0 010 252.118zM112 64c-26.51.0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48z"/></svg>iOS</a></div></div></main><div id=back-to-top class=back-to-top><a href=#><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="icon arrow-up"><path d="M34.9 289.5l-22.2-22.2c-9.4-9.4-9.4-24.6.0-33.9L207 39c9.4-9.4 24.6-9.4 33.9.0l194.3 194.3c9.4 9.4 9.4 24.6.0 33.9L413 289.4c-9.5 9.5-25 9.3-34.3-.4L264 168.6V456c0 13.3-10.7 24-24 24h-32c-13.3.0-24-10.7-24-24V168.6L69.2 289.1c-9.3 9.8-24.8 10-34.3.4z"/></svg></a></div><footer id=footer class=footer><div class=footer-inner><div class=site-info>©&nbsp;2019–2021&nbsp;<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon footer-icon"><path d="M462.3 62.6C407.5 15.9 326 24.3 275.7 76.2L256 96.5l-19.7-20.3C186.1 24.3 104.5 15.9 49.7 62.6c-62.8 53.6-66.1 149.8-9.9 207.9l193.5 199.8c12.5 12.9 32.8 12.9 45.3.0l193.5-199.8c56.3-58.1 53-154.3-9.8-207.9z"/></svg>&nbsp;Dev - jw</div></div></footer></div><script>'serviceWorker'in navigator&&window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js')})</script><script>typeof MathJax=='undefined'?(window.MathJax={loader:{load:['[tex]/mhchem']},options:{renderActions:{addMenu:[0,'','']}},tex:{inlineMath:{'[+]':[['$','$']]},tags:'ams',packages:{'[+]':['mhchem']}}},function(){var a=document.createElement('script');a.src='https://cdn.jsdelivr.net/npm/mathjax@3.1.2/es5/tex-mml-chtml.js',a.defer=!0,document.head.appendChild(a)}()):(MathJax.texReset(),MathJax.typeset())</script><script src=https://cdn.jsdelivr.net/npm/mermaid@8.8.3/dist/mermaid.min.js></script><script>let mermaidConfig={startOnLoad:!0,flowchart:{useMaxWidth:!1,htmlLabels:!0},theme:'default'};mermaid.initialize(mermaidConfig)</script><script src=https://cdn.jsdelivr.net/npm/medium-zoom@latest/dist/medium-zoom.min.js></script><script>mediumZoom(document.querySelectorAll('div.post-body img'),{background:'hsla(var(--color-bg-h), var(--color-bg-s), var(--color-bg-l), 0.95)'})</script><script src=https://cdn.jsdelivr.net/npm/instant.page@5.1.0/instantpage.min.js type=module defer></script></body></html>

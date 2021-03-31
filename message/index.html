@@ -1,0 +1,503 @@
+<!doctype html><html lang=zh-cn><head prefix="og: http://ogp.me/ns# article: http://ogp.me/ns/article#"><meta charset=utf-8><meta name=generator content="Hugo 0.82.0"><meta name=theme-color content="#fff"><meta name=viewport content="width=device-width,initial-scale=1"><meta name=format-detection content="telephone=no, date=no, address=no, email=no"><meta http-equiv=cache-control content="no-transform"><meta http-equiv=cache-control content="no-siteapp"><title>iOS底层原理探索-消息查找 | Dev - jw</title><link rel=stylesheet href=../css/meme.min.ae509b8259cb6c090411be6371211f6bb00631055ec9b68a994f27bb5f5f5f76.css><script src=../js/meme.min.3a56ecbb4ec7b23a805fc0116d4dac9095813dfd877cd8379675a8bdac538ffe.js></script><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400;1,700&family=Noto+Serif+SC:wght@400;500;700&family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap" media=print onload="this.media='all'"><noscript><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400;1,700&family=Noto+Serif+SC:wght@400;500;700&family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap"></noscript><meta name=author content="Dev - jw"><meta name=description content="在cache_t中，介绍了方法的缓存，那么方法具体是什么？方法的调用过程又是怎么样的……"><link rel="shortcut icon" href=../favicon.ico type=image/x-icon><link rel=mask-icon href=../icons/safari-pinned-tab.svg color=#2a6df4><link rel=apple-touch-icon sizes=180x180 href=../icons/apple-touch-icon.png><meta name=apple-mobile-web-app-capable content="yes"><meta name=apple-mobile-web-app-title content="Dev - jw"><meta name=apple-mobile-web-app-status-bar-style content="black"><meta name=mobile-web-app-capable content="yes"><meta name=application-name content="Dev - jw"><meta name=msapplication-starturl content="../"><meta name=msapplication-TileColor content="#fff"><meta name=msapplication-TileImage content="../icons/mstile-150x150.png"><link rel=manifest href=../manifest.json><link rel=canonical href=https://dev.hjw.best/message/><script type=application/ld+json>{"@context":"https://schema.org","@type":"WebPage","datePublished":"2020-09-18T22:07:29+08:00","dateModified":"2021-03-31T15:42:56+08:00","url":"https://dev.hjw.best/message/","name":"iOS底层原理探索-消息查找","description":"在cache_t中，介绍了方法的缓存，那么方法具体是什么？方法的调用过程又是怎么样的……","image":"https://dev.hjw.best/favicon.ico","license":"Copyright","publisher":{"@type":"Organization","name":"Dev - jw","logo":{"@type":"ImageObject","url":"https://dev.hjw.best/favicon.ico"},"url":"https://dev.hjw.best/"},"mainEntityOfPage":{"@type":"WebSite","@id":"https://dev.hjw.best/"}}</script><meta name=twitter:card content="summary"><meta property="og:title" content="iOS底层原理探索-消息查找"><meta property="og:description" content="在cache_t中，介绍了方法的缓存，那么方法具体是什么？方法的调用过程又是怎么样的……"><meta property="og:url" content="https://dev.hjw.best/message/"><meta property="og:site_name" content="Dev - jw"><meta property="og:locale" content="zh"><meta property="og:image" content="https://dev.hjw.best/favicon.ico"><meta property="og:type" content="website"><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=Lato:wght@700&text=reuixiy&display=swap" media=print onload="this.media='all'"><noscript><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=Lato:wght@700&text=reuixiy&display=swap"></noscript><meta name=baidu-site-verification content="5nzYjT6RG7"></head><body><div class=container><header class=header><div class=header-wrapper><div class="header-inner single"><div class=site-brand><a href=../ class=brand>Dev - jw</a></div><nav class=nav><ul class=menu id=menu><li class=menu-item><a href=../about><span class=menu-item-name>关于</span></a></li><li class=menu-item><a id=theme-switcher href=#><span class="icon theme-icon-light">🌞</span><span class="icon theme-icon-dark">🌙</span></a></li></ul></nav></div></div><input type=checkbox id=nav-toggle aria-hidden=true>
+<label for=nav-toggle class=nav-toggle></label><label for=nav-toggle class=nav-curtain></label></header><main class="main single" id=main><div class=main-inner><article class="content post h-entry" data-align=default data-type=posts data-toc-num=true><h1 class="post-title p-name">iOS底层原理探索-消息查找</h1><div class=post-meta><time datetime=2020-09-18T22:07:29+08:00 class="post-meta-item published dt-published"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="icon post-meta-icon"><path d="M148 288h-40c-6.6.0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v40c0 6.6-5.4 12-12 12zm108-12v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm96 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm-96 96v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm-96 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm192 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm96-260v352c0 26.5-21.5 48-48 48H48c-26.5.0-48-21.5-48-48V112c0-26.5 21.5-48 48-48h48V12c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v52h128V12c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v52h48c26.5.0 48 21.5 48 48zm-48 346V160H48v298c0 3.3 2.7 6 6 6h340c3.3.0 6-2.7 6-6z"/></svg>&nbsp;2020-09-18</time></div><div class="post-body e-content"><p>在<code>cache_t</code>中，介绍了方法的缓存，那么方法具体是什么？方法的调用过程又是怎么样的呢？本来将对方法进行分析</p><p>同样的，先提出几个问题：</p><ul><li><p>什么是 Runtime</p></li><li><p>方法的本质</p></li><li><p>方法快速查找流程</p></li><li><p>方法慢速查找流程</p></li></ul><h3 id=runtime><a href=#runtime class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>Runtime</h3><p>C中的函数调用方式，是使用的静态绑定(static binding)，即<strong>在编译期就能决定运行时所应调用的函数</strong>。</p><p>而在Objective-C中，如果向某对象传递消息，就会使用动态绑定机制来决定需要调用的方法。</p><p>而对于Objective-C的底层实现，都是C的函数。</p><p>对象在收到消息之后，调用了哪些方法，完全取决于Runtime来决定，甚至可以在Runtime期间改变。</p><p><strong>什么是Runtime</strong></p><p><code>Runtime</code>是一套 API，由 c、c++、汇编一起写成的，为 <code>Objective-c</code> 提供了运行时的能力</p><ul><li>运行时：<code>代码跑起来，被装载到内存中</code>的过程，如果此时出错，则程序会崩溃，是一个<code>动态</code>阶段</li><li>编译时：<code>源代码翻译成机器能识别的代码</code>的过程，主要是对语言进行最基本的检查报错，即词法分析、语法分析等，是一个<code>静态</code>的阶段</li></ul><p><strong>调用Runtime的方式</strong></p><ul><li>Objective-C Code，如<code>[person run]</code></li><li>NSObject API，如<code>isKindofClass</code></li><li>Runtime APi，如<code>class_getInstanceSize</code></li></ul><h3 id=方法的本质><a href=#方法的本质 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>方法的本质</h3><p>一般地，对象发送消息，使用下面这种写法</p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=c1>//main.m中方法的调用
+</span><span class=c1></span><span class=n>Person</span> <span class=o>*</span><span class=n>person</span> <span class=o>=</span> <span class=p>[</span><span class=n>Person</span> <span class=n>alloc</span><span class=p>];</span>
+<span class=p>[</span><span class=n>person</span> <span class=n>run</span><span class=p>];</span>
+</code></pre></div><p>通过 clang 编译后，<code>[person run]</code>会被编译为：<code>objc_msgSend(person, sel_registerName("run"))</code>，转换成标准的消息传递的 C函数，即<code>objc_msgSend(消息接收者, 方法编号)</code></p><div class=highlight><pre class=chroma><code class=language-c++ data-lang=c++><span class=c1>//👇clang编译后的底层实现
+</span><span class=c1></span><span class=n>Person</span> <span class=o>*</span><span class=n>person</span> <span class=o>=</span> <span class=p>((</span><span class=n>Person</span> <span class=o>*</span><span class=p>(</span><span class=o>*</span><span class=p>)(</span><span class=n>id</span><span class=p>,</span> <span class=n>SEL</span><span class=p>))(</span><span class=kt>void</span> <span class=o>*</span><span class=p>)</span><span class=n>objc_msgSend</span><span class=p>)((</span><span class=n>id</span><span class=p>)</span><span class=n>objc_getClass</span><span class=p>(</span><span class=s>&#34;Person&#34;</span><span class=p>),</span> <span class=n>sel_registerName</span><span class=p>(</span><span class=s>&#34;alloc&#34;</span><span class=p>));</span>
+<span class=p>((</span><span class=kt>void</span> <span class=p>(</span><span class=o>*</span><span class=p>)(</span><span class=n>id</span><span class=p>,</span> <span class=n>SEL</span><span class=p>))(</span><span class=kt>void</span> <span class=o>*</span><span class=p>)</span><span class=n>objc_msgSend</span><span class=p>)((</span><span class=n>id</span><span class=p>)</span><span class=n>person</span><span class=p>,</span> <span class=n>sel_registerName</span><span class=p>(</span><span class=s>&#34;run&#34;</span><span class=p>));</span>
+</code></pre></div><p>是的，方法的本质：</p><p>在<code>Objective-C</code>发送消息，通过编译在底层，都是<strong>通过<code>objc_msgSend函数</code>进行消息传递</strong></p><p><strong>objc_msgSend</strong></p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=kt>id</span> <span class=n>objc_msgSend</span><span class=p>(</span><span class=kt>id</span> <span class=nb>self</span><span class=p>,</span> <span class=kt>SEL</span> <span class=n>op</span><span class=p>,</span> <span class=p>...)</span>
+</code></pre></div><p><code>objc_msgSend</code>这是一个可变参数函数。其中第二个参数类型是SEL，在 OC 中是 <code>@selector()</code> 方法选择器</p><p><strong>@selector()</strong></p><p>对于 <code>SEL</code> 类型，经常使用的是<code>@selector()</code>，源码定义为：</p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=k>typedef</span> <span class=k>struct</span> <span class=n>objc_selector</span> <span class=o>*</span><span class=kt>SEL</span><span class=p>;</span>
+</code></pre></div><p><code>objc_selector</code>是一个映射到方法的 C 字符串。需要注意的是<code>@selector()</code>选择子只与函数名有关。</p><ul><li>不同类中相同名字的方法所对应的方法选择器是相同的</li><li>方法名字相同而变量类型不同，也会导致它们具有相同的方法选择器</li></ul><p>因此，<strong>OC 是不支持函数重载</strong></p><blockquote><p>如果外部定义了C函数并调用如<code>void fly() {}</code>，在clang编译之后还是<code>fly()</code>而不是通过<code>objc_msgSend</code>去调用。</p><p>因为发送消息就是找函数实现的过程，而C函数可以通过<code>函数名</code>——<code>指针</code>就可以找到</p></blockquote><p>那么为什么要有这个选择子呢？在<a href=http://draveness.me/message/ target=_blank rel=noopener>从源代码看 ObjC 中消息的发送</a>一文中，作者<strong>Draveness</strong>对其原因进行了推断：</p><ol><li>Objective-C 为我们维护了一个巨大的选择子表</li><li>在使用 <code>@selector()</code> 时，会从这个选择子表中根据选择子的名字查找对应的 <code>SEL</code>。如果没有找到，则会生成一个 SEL 并添加到表中</li><li>在编译期时，会扫描全部的头文件和实现文件将其中的方法以及使用 <code>@selector()</code> 生成的选择子加入到选择子表中</li></ol><h3 id=方法查找流程--objc_msgsend源码解析><a href=#方法查找流程--objc_msgsend源码解析 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>方法查找流程 —— objc_msgSend源码解析</h3><blockquote><p>消息查找：objc_msgSend 依据 <code>接收者receiver</code> 与 <code>方法编号sel</code> 来调用<code>具体实现方法imp</code> 的过程</p></blockquote><p><code>objc_msgSend</code>是用汇编写的，是因为：</p><ul><li>C 语言不能通过写一个函数，保留未知的参数，跳转到任意的指针，而汇编有寄存器</li><li>对于一些调用频率太高的函数或操作，使用汇编来实现，能够提高效率和性能，容易被机器来识别</li></ul><h4 id=快速查找流程><a href=#快速查找流程 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>快速查找流程</h4><p>在<code>obj4-781</code>里面的<code>objc-msg-arm64.s</code>文件中，<code>objc_msgSend</code>汇编源码：</p><div class=highlight><pre class=chroma><code class=language-asm data-lang=asm>	<span class=nf>ENTRY</span> <span class=no>_objc_msgSend</span>
+	<span class=nf>UNWIND</span> <span class=no>_objc_msgSend</span><span class=p>,</span> <span class=no>NoFrame</span>
+
+	<span class=err>/*</span> <span class=nf>p0表示0寄存器的指针</span><span class=err>，</span><span class=no>x0</span> <span class=err>表示它的值。</span><span class=p>*</span><span class=err>/</span> 
+	<span class=no>cmp</span>	<span class=no>p0</span><span class=p>,</span> <span class=c>#0			// nil check and tagged pointer check
+</span><span class=c>#if SUPPORT_TAGGED_POINTERS
+</span><span class=c></span>	<span class=no>b.le</span>	<span class=no>LNilOrTagged</span>		<span class=err>//</span>  <span class=p>(</span><span class=no>MSB</span> <span class=no>tagged</span> <span class=no>pointer</span> <span class=no>looks</span> <span class=no>negative</span><span class=p>)</span>
+<span class=c>#else
+</span><span class=c></span>	<span class=nf>b.eq</span>	<span class=no>LReturnZero</span>
+<span class=c>#endif
+</span><span class=c></span>	<span class=nf>ldr</span>	<span class=no>p13</span><span class=p>,</span> <span class=p>[</span><span class=no>x0</span><span class=p>]</span>		<span class=err>//</span> <span class=no>p13</span> <span class=err>=</span> <span class=no>isa</span>
+	<span class=nf>GetClassFromIsa_p16</span> <span class=no>p13</span>		<span class=err>//</span> <span class=no>p16</span> <span class=err>=</span> <span class=no>class</span>
+<span class=nl>LGetIsaDone:</span>
+	<span class=err>//</span> <span class=nf>calls</span> <span class=no>imp</span> <span class=no>or</span> <span class=no>objc_msgSend_uncached</span>
+	<span class=nf>CacheLookup</span> <span class=no>NORMAL</span><span class=p>,</span> <span class=no>_objc_msgSend</span>
+</code></pre></div><p><strong>分析汇编代码</strong></p><p>进入到<code>_objc_msgSend</code>方法</p><ul><li>比较<code>p0</code>是否为空，即消息接收者是否为空</li><li>判断是否为<code>tagged_pointers</code>(小对象类型)，之后会单独分析<code>tagged_pointers</code></li><li>取出<code>x0</code>，存入<code>p13</code>寄存器，即从<code>receiver</code>中取出<code>isa</code>存入<code>p13</code>寄存器</li><li>通过<code>GetClassFromIsa_p16</code>，获取<code>receiver</code>中的类信息</li><li>进入<code>CacheLookup</code>，根据当前类的缓存查找<code>imp</code>——<strong>快速查找流程</strong></li></ul><p><code>GetClassFromIsa_p16</code>宏的实现</p><div class=highlight><pre class=chroma><code class=language-asm data-lang=asm><span class=na>.macro</span> <span class=no>GetClassFromIsa_p16</span> <span class=err>/</span><span class=p>*</span> <span class=no>src</span> <span class=p>*</span><span class=err>/</span>
+
+<span class=c>#if SUPPORT_INDEXED_ISA
+</span><span class=c></span>	<span class=err>//</span> <span class=nf>Indexed</span> <span class=no>isa</span>
+	<span class=nf>mov</span>	<span class=no>p16</span><span class=p>,</span> <span class=no>$0</span>			<span class=err>//</span> <span class=no>optimistically</span> <span class=no>set</span> <span class=no>dst</span> <span class=err>=</span> <span class=no>src</span>
+	<span class=nf>tbz</span>	<span class=no>p16</span><span class=p>,</span> <span class=c>#ISA_INDEX_IS_NPI_BIT, 1f	// done if not non-pointer isa
+</span><span class=c></span>	<span class=err>//</span> <span class=no>isa</span> <span class=no>in</span> <span class=no>p16</span> <span class=no>is</span> <span class=no>indexed</span>
+	<span class=nf>adrp</span>	<span class=no>x10</span><span class=p>,</span> <span class=no>_objc_indexed_classes@PAGE</span>
+	<span class=nf>add</span>	<span class=no>x10</span><span class=p>,</span> <span class=no>x10</span><span class=p>,</span> <span class=no>_objc_indexed_classes@PAGEOFF</span>
+	<span class=nf>ubfx</span>	<span class=no>p16</span><span class=p>,</span> <span class=no>p16</span><span class=p>,</span> <span class=c>#ISA_INDEX_SHIFT, #ISA_INDEX_BITS  // extract index
+</span><span class=c></span>	<span class=no>ldr</span>	<span class=no>p16</span><span class=p>,</span> <span class=p>[</span><span class=no>x10</span><span class=p>,</span> <span class=no>p16</span><span class=p>,</span> <span class=no>UXTP</span> <span class=c>#PTRSHIFT]	// load class from array
+</span><span class=c></span><span class=mi>1</span><span class=p>:</span>
+
+<span class=c>#elif __LP64__
+</span><span class=c></span>	<span class=err>//</span> <span class=err>64-</span><span class=nf>bit</span> <span class=no>packed</span> <span class=no>isa</span>
+	<span class=nf>and</span>	<span class=no>p16</span><span class=p>,</span> <span class=no>$0</span><span class=p>,</span> <span class=c>#ISA_MASK
+</span><span class=c></span>
+<span class=c>#else
+</span><span class=c></span>	<span class=err>//</span> <span class=err>32-</span><span class=nf>bit</span> <span class=no>raw</span> <span class=no>isa</span>
+	<span class=nf>mov</span>	<span class=no>p16</span><span class=p>,</span> <span class=no>$0</span>
+
+<span class=c>#endif
+</span><span class=c></span>
+<span class=na>.endmacro</span>
+</code></pre></div><p><code>and p16, $0, #ISA_MASK</code>等同于<code>isa & ISA_MASK</code>，也就是获取 isa 指针中 <code>shiftcls</code> 中的类信息</p><p><code>CacheLookup</code>宏的实现：</p><div class=highlight><pre class=chroma><code class=language-asm data-lang=asm><span class=na>.macro</span> <span class=no>CacheLookup</span>
+	<span class=err>//</span>
+	<span class=err>//</span> <span class=nf>Restart</span> <span class=no>protocol</span><span class=p>:</span>
+	<span class=err>//</span>
+	<span class=err>//</span>   <span class=nf>As</span> <span class=no>soon</span> <span class=no>as</span> <span class=no>we</span><span class=err>&#39;</span><span class=no>re</span> <span class=no>past</span> <span class=no>the</span> <span class=no>LLookupStart$1</span> <span class=no>label</span> <span class=no>we</span> <span class=no>may</span> <span class=no>have</span> <span class=no>loaded</span>
+	<span class=err>//</span>   <span class=nf>an</span> <span class=no>invalid</span> <span class=no>cache</span> <span class=no>pointer</span> <span class=no>or</span> <span class=no>mask.</span>
+	<span class=err>//</span>
+	<span class=err>//</span>   <span class=nf>When</span> <span class=no>task_restartable_ranges_synchronize</span><span class=p>()</span> <span class=no>is</span> <span class=no>called</span><span class=p>,</span>
+	<span class=err>//</span>   <span class=err>(</span><span class=nf>or</span> <span class=no>when</span> <span class=no>a</span> <span class=no>signal</span> <span class=no>hits</span> <span class=no>us</span><span class=p>)</span> <span class=no>before</span> <span class=no>we</span><span class=err>&#39;</span><span class=no>re</span> <span class=no>past</span> <span class=no>LLookupEnd$1</span><span class=p>,</span>
+	<span class=err>//</span>   <span class=nf>then</span> <span class=no>our</span> <span class=no>PC</span> <span class=no>will</span> <span class=no>be</span> <span class=no>reset</span> <span class=no>to</span> <span class=no>LLookupRecover$1</span> <span class=no>which</span> <span class=no>forcefully</span>
+	<span class=err>//</span>   <span class=nf>jumps</span> <span class=no>to</span> <span class=no>the</span> <span class=no>cache-miss</span> <span class=no>codepath</span> <span class=no>which</span> <span class=no>have</span> <span class=no>the</span> <span class=no>following</span>
+	<span class=err>//</span>   <span class=nl>requirements:</span>
+	<span class=err>//</span>
+	<span class=err>//</span>   <span class=nl>GETIMP:</span>
+	<span class=err>//</span>     <span class=nf>The</span> <span class=no>cache-miss</span> <span class=no>is</span> <span class=no>just</span> <span class=no>returning</span> <span class=no>NULL</span> <span class=p>(</span><span class=no>setting</span> <span class=no>x0</span> <span class=no>to</span> <span class=mi>0</span><span class=p>)</span>
+	<span class=err>//</span>
+	<span class=err>//</span>   <span class=nf>NORMAL</span> <span class=no>and</span> <span class=no>LOOKUP</span><span class=p>:</span>
+	<span class=err>//</span>   <span class=err>-</span> <span class=nf>x0</span> <span class=no>contains</span> <span class=no>the</span> <span class=no>receiver</span>
+	<span class=err>//</span>   <span class=err>-</span> <span class=nf>x1</span> <span class=no>contains</span> <span class=no>the</span> <span class=no>selector</span>
+	<span class=err>//</span>   <span class=err>-</span> <span class=nf>x16</span> <span class=no>contains</span> <span class=no>the</span> <span class=no>isa</span>
+	<span class=err>//</span>   <span class=err>-</span> <span class=nf>other</span> <span class=no>registers</span> <span class=no>are</span> <span class=no>set</span> <span class=no>as</span> <span class=no>per</span> <span class=no>calling</span> <span class=no>conventions</span>
+	<span class=err>//</span>
+<span class=nl>LLookupStart$1:</span>
+
+	<span class=err>//</span> <span class=nf>p1</span> <span class=err>=</span> <span class=no>SEL</span><span class=p>,</span> <span class=no>p16</span> <span class=err>=</span> <span class=no>isa</span>
+	<span class=nf>ldr</span>	<span class=no>p11</span><span class=p>,</span> <span class=p>[</span><span class=no>x16</span><span class=p>,</span> <span class=c>#CACHE]				// p11 = mask|buckets
+</span><span class=c></span>
+<span class=c>#if CACHE_MASK_STORAGE == CACHE_MASK_STORAGE_HIGH_16
+</span><span class=c></span>	<span class=nf>and</span>	<span class=no>p10</span><span class=p>,</span> <span class=no>p11</span><span class=p>,</span> <span class=c>#0x0000ffffffffffff	// p10 = buckets
+</span><span class=c></span>	<span class=no>and</span>	<span class=no>p12</span><span class=p>,</span> <span class=no>p1</span><span class=p>,</span> <span class=no>p11</span><span class=p>,</span> <span class=no>LSR</span> <span class=c>#48		// x12 = _cmd &amp; mask
+</span><span class=c>#elif CACHE_MASK_STORAGE == CACHE_MASK_STORAGE_LOW_4
+</span><span class=c></span>	<span class=no>and</span>	<span class=no>p10</span><span class=p>,</span> <span class=no>p11</span><span class=p>,</span> <span class=c>#~0xf			// p10 = buckets
+</span><span class=c></span>	<span class=no>and</span>	<span class=no>p11</span><span class=p>,</span> <span class=no>p11</span><span class=p>,</span> <span class=c>#0xf			// p11 = maskShift
+</span><span class=c></span>	<span class=no>mov</span>	<span class=no>p12</span><span class=p>,</span> <span class=c>#0xffff
+</span><span class=c></span>	<span class=no>lsr</span>	<span class=no>p11</span><span class=p>,</span> <span class=no>p12</span><span class=p>,</span> <span class=no>p11</span>				<span class=err>//</span> <span class=no>p11</span> <span class=err>=</span> <span class=no>mask</span> <span class=err>=</span> <span class=mi>0xffff</span> <span class=err>&gt;&gt;</span> <span class=no>p11</span>
+	<span class=nf>and</span>	<span class=no>p12</span><span class=p>,</span> <span class=no>p1</span><span class=p>,</span> <span class=no>p11</span>				<span class=err>//</span> <span class=no>x12</span> <span class=err>=</span> <span class=no>_cmd</span> <span class=err>&amp;</span> <span class=no>mask</span>
+<span class=c>#else
+</span><span class=c>#error Unsupported cache mask storage for ARM64.
+</span><span class=c>#endif
+</span><span class=c></span>
+
+	<span class=nf>add</span>	<span class=no>p12</span><span class=p>,</span> <span class=no>p10</span><span class=p>,</span> <span class=no>p12</span><span class=p>,</span> <span class=no>LSL</span> <span class=c>#(1+PTRSHIFT)
+</span><span class=c></span>		             <span class=err>//</span> <span class=no>p12</span> <span class=err>=</span> <span class=no>buckets</span> <span class=err>+</span> <span class=p>((</span><span class=no>_cmd</span> <span class=err>&amp;</span> <span class=no>mask</span><span class=p>)</span> <span class=err>&lt;&lt;</span> <span class=p>(</span><span class=mi>1</span><span class=err>+</span><span class=no>PTRSHIFT</span><span class=p>))</span>
+
+	<span class=nf>ldp</span>	<span class=no>p17</span><span class=p>,</span> <span class=no>p9</span><span class=p>,</span> <span class=p>[</span><span class=no>x12</span><span class=p>]</span>		<span class=err>//</span> <span class=err>{</span><span class=no>imp</span><span class=p>,</span> <span class=no>sel</span><span class=err>}</span> <span class=err>=</span> <span class=p>*</span><span class=no>bucket</span>
+<span class=err>1:</span>	<span class=nf>cmp</span>	<span class=no>p9</span><span class=p>,</span> <span class=no>p1</span>			<span class=err>//</span> <span class=no>if</span> <span class=p>(</span><span class=no>bucket-</span><span class=err>&gt;</span><span class=no>sel</span> <span class=p>!</span><span class=err>=</span> <span class=no>_cmd</span><span class=p>)</span>
+	<span class=nf>b.ne</span>	<span class=mi>2</span><span class=no>f</span>			<span class=err>//</span>     <span class=no>scan</span> <span class=no>more</span>
+	<span class=nf>CacheHit</span> <span class=no>$0</span>			<span class=err>//</span> <span class=no>call</span> <span class=no>or</span> <span class=no>return</span> <span class=no>imp</span>
+	
+<span class=err>2:</span>	<span class=err>//</span> <span class=nf>not</span> <span class=no>hit</span><span class=p>:</span> <span class=no>p12</span> <span class=err>=</span> <span class=no>not-hit</span> <span class=no>bucket</span>
+	<span class=nf>CheckMiss</span> <span class=no>$0</span>			<span class=err>//</span> <span class=no>miss</span> <span class=no>if</span> <span class=no>bucket-</span><span class=err>&gt;</span><span class=no>sel</span> <span class=err>==</span> <span class=mi>0</span>
+	<span class=nf>cmp</span>	<span class=no>p12</span><span class=p>,</span> <span class=no>p10</span>		<span class=err>//</span> <span class=no>wrap</span> <span class=no>if</span> <span class=no>bucket</span> <span class=err>==</span> <span class=no>buckets</span>
+	<span class=nf>b.eq</span>	<span class=mi>3</span><span class=no>f</span>
+	<span class=nf>ldp</span>	<span class=no>p17</span><span class=p>,</span> <span class=no>p9</span><span class=p>,</span> <span class=p>[</span><span class=no>x12</span><span class=p>,</span> <span class=c>#-BUCKET_SIZE]!	// {imp, sel} = *--bucket
+</span><span class=c></span>	<span class=no>b</span>	<span class=mi>1</span><span class=no>b</span>			<span class=err>//</span> <span class=no>loop</span>
+
+<span class=err>3:</span>	<span class=err>//</span> <span class=nl>wrap:</span> <span class=nf>p12</span> <span class=err>=</span> <span class=no>first</span> <span class=no>bucket</span><span class=p>,</span> <span class=no>w11</span> <span class=err>=</span> <span class=no>mask</span>
+<span class=c>#if CACHE_MASK_STORAGE == CACHE_MASK_STORAGE_HIGH_16
+</span><span class=c></span>	<span class=nf>add</span>	<span class=no>p12</span><span class=p>,</span> <span class=no>p12</span><span class=p>,</span> <span class=no>p11</span><span class=p>,</span> <span class=no>LSR</span> <span class=c>#(48 - (1+PTRSHIFT))
+</span><span class=c></span>					<span class=err>//</span> <span class=no>p12</span> <span class=err>=</span> <span class=no>buckets</span> <span class=err>+</span> <span class=p>(</span><span class=no>mask</span> <span class=err>&lt;&lt;</span> <span class=mi>1</span><span class=err>+</span><span class=no>PTRSHIFT</span><span class=p>)</span>
+<span class=c>#elif CACHE_MASK_STORAGE == CACHE_MASK_STORAGE_LOW_4
+</span><span class=c></span>	<span class=nf>add</span>	<span class=no>p12</span><span class=p>,</span> <span class=no>p12</span><span class=p>,</span> <span class=no>p11</span><span class=p>,</span> <span class=no>LSL</span> <span class=c>#(1+PTRSHIFT)
+</span><span class=c></span>					<span class=err>//</span> <span class=no>p12</span> <span class=err>=</span> <span class=no>buckets</span> <span class=err>+</span> <span class=p>(</span><span class=no>mask</span> <span class=err>&lt;&lt;</span> <span class=mi>1</span><span class=err>+</span><span class=no>PTRSHIFT</span><span class=p>)</span>
+<span class=c>#else
+</span><span class=c>#error Unsupported cache mask storage for ARM64.
+</span><span class=c>#endif
+</span><span class=c></span>
+	<span class=err>//</span> <span class=nf>Clone</span> <span class=no>scanning</span> <span class=no>loop</span> <span class=no>to</span> <span class=no>miss</span> <span class=no>instead</span> <span class=no>of</span> <span class=no>hang</span> <span class=no>when</span> <span class=no>cache</span> <span class=no>is</span> <span class=no>corrupt.</span>
+	<span class=err>//</span> <span class=nf>The</span> <span class=no>slow</span> <span class=no>path</span> <span class=no>may</span> <span class=no>detect</span> <span class=no>any</span> <span class=no>corruption</span> <span class=no>and</span> <span class=no>halt</span> <span class=no>later.</span>
+
+	<span class=nf>ldp</span>	<span class=no>p17</span><span class=p>,</span> <span class=no>p9</span><span class=p>,</span> <span class=p>[</span><span class=no>x12</span><span class=p>]</span>		<span class=err>//</span> <span class=err>{</span><span class=no>imp</span><span class=p>,</span> <span class=no>sel</span><span class=err>}</span> <span class=err>=</span> <span class=p>*</span><span class=no>bucket</span>
+<span class=err>1:</span>	<span class=nf>cmp</span>	<span class=no>p9</span><span class=p>,</span> <span class=no>p1</span>			<span class=err>//</span> <span class=no>if</span> <span class=p>(</span><span class=no>bucket-</span><span class=err>&gt;</span><span class=no>sel</span> <span class=p>!</span><span class=err>=</span> <span class=no>_cmd</span><span class=p>)</span>
+	<span class=nf>b.ne</span>	<span class=mi>2</span><span class=no>f</span>			<span class=err>//</span>     <span class=no>scan</span> <span class=no>more</span>
+	<span class=nf>CacheHit</span> <span class=no>$0</span>			<span class=err>//</span> <span class=no>call</span> <span class=no>or</span> <span class=no>return</span> <span class=no>imp</span>
+	
+<span class=err>2:</span>	<span class=err>//</span> <span class=nf>not</span> <span class=no>hit</span><span class=p>:</span> <span class=no>p12</span> <span class=err>=</span> <span class=no>not-hit</span> <span class=no>bucket</span>
+	<span class=nf>CheckMiss</span> <span class=no>$0</span>			<span class=err>//</span> <span class=no>miss</span> <span class=no>if</span> <span class=no>bucket-</span><span class=err>&gt;</span><span class=no>sel</span> <span class=err>==</span> <span class=mi>0</span>
+	<span class=nf>cmp</span>	<span class=no>p12</span><span class=p>,</span> <span class=no>p10</span>		<span class=err>//</span> <span class=no>wrap</span> <span class=no>if</span> <span class=no>bucket</span> <span class=err>==</span> <span class=no>buckets</span>
+	<span class=nf>b.eq</span>	<span class=mi>3</span><span class=no>f</span>
+	<span class=nf>ldp</span>	<span class=no>p17</span><span class=p>,</span> <span class=no>p9</span><span class=p>,</span> <span class=p>[</span><span class=no>x12</span><span class=p>,</span> <span class=c>#-BUCKET_SIZE]!	// {imp, sel} = *--bucket
+</span><span class=c></span>	<span class=no>b</span>	<span class=mi>1</span><span class=no>b</span>			<span class=err>//</span> <span class=no>loop</span>
+
+<span class=nl>LLookupEnd$1:</span>
+<span class=nl>LLookupRecover$1:</span>
+<span class=err>3:</span>	<span class=err>//</span> <span class=nf>double</span> <span class=no>wrap</span>
+	<span class=nf>JumpMiss</span> <span class=no>$0</span>
+
+<span class=na>.endmacro</span>
+</code></pre></div><p>分析查找流程：</p><ul><li><p><code>ldr p11, [x16, #CACHE]</code>：<code>x16</code>存储的是 isa，<code>#CACHE</code>是个宏定义，表示 16 个字节；<code>[x16, #CACHE]</code>表示类对象<code>内存地址偏移16字节</code>得到<code>cache</code></p></li><li><p><code>and p10, p11, #0x0000ffffffffffff</code>：将 <code>cache</code> 和 <code>0x0000ffffffffffff</code>进行<code>&</code>运算，得到 <code>buckets</code> 存入 <code>p10</code> 寄存器</p></li><li><p><code>and p12, p1, p11, LSR #48</code>：将 <code>cache</code> 进行右移 48 位，得到 <code>mask</code>，存入 <code>p11</code> 并与 <code>p1</code> 进行<code>&</code>操作，即 <code>_cmd & mask = sel & mask</code>得到哈希索引存入 <code>p12</code> 寄存器</p><div class=highlight><pre class=chroma><code class=language-c++ data-lang=c++><span class=k>static</span> <span class=kr>inline</span> <span class=n>mask_t</span> <span class=nf>cache_hash</span><span class=p>(</span><span class=n>SEL</span> <span class=n>sel</span><span class=p>,</span> <span class=n>mask_t</span> <span class=n>mask</span><span class=p>)</span> 
+<span class=p>{</span>
+    <span class=k>return</span> <span class=p>(</span><span class=n>mask_t</span><span class=p>)(</span><span class=n>uintptr_t</span><span class=p>)</span><span class=n>sel</span> <span class=o>&amp;</span> <span class=n>mask</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div></li><li><p><code>add p12, p10, p12, LSL #(1+PTRSHIFT)</code>：</p><ul><li><code>PTRSHIFT</code>是宏定义，在 <code>arm64</code> 下等于 <code>3</code>，<em>1+PTRSHIFT = 4</em></li><li><code>p10, p12, LSL #(1+PTRSHIFT)</code>即左移 4 位（结构体 <code>bucket_t</code> 占 16 字节，sel、imp 各占 8），<code>哈希索引*bucket占用内存大小</code>，得到<code>buckets</code>首地址在<code>实际内存</code>中的<code>偏移量</code></li><li><code>p12, p10, p12, LSL #(1+PTRSHIFT)</code>表示通过<code>buckets</code>首地址+实际偏移量，获取哈希索引对应的<code>bucket</code></li></ul></li><li><p><code>ldp p17, p9, [x12]</code>根据获取的<code>bucket</code>，取出其中的<code>sel</code>存入<code>p17</code>，即<code>p17 = sel</code>，取出<code>imp</code>存入<code>p9</code>，即<code>p9 = imp</code></p></li><li><p>开启第一次循环</p><ul><li>比较获取的<code>bucket</code>中<code>sel</code> 与 <code>objc_msgSend</code>的第二个参数的<code>_cmd(即p1)</code>是否相等</li><li>如果<code>相等</code>，则直接跳转至<code>CacheHit</code>，即<code>缓存命中</code>，返回<code>imp</code></li><li>如果不相等，有以下两种情况<ul><li>如果一直都找不到，直接跳转至<code>CheckMiss</code>，因为<code>$0</code>是<code>normal</code>，会跳转至<code>__objc_msgSend_uncached</code>，即进入<code>慢速查找流程</code></li><li>如果<code>根据index获取的bucket</code> 等于 <code>buckets</code> 的第一个元素，则<code>人为</code>的将<code>当前bucket设置为buckets的最后一个元素</code>（通过<code>buckets首地址+mask右移44位</code>（等同于左移4位）直接<code>定位到bucker的最后一个元素</code>），接着执行下面的汇编，来到第二次循环</li></ul></li></ul></li><li><p>第二次循环</p><ul><li><p>重复第一次循环的操作，与之唯一不同的是：</p><p>在 <code>sel != _cmd</code> 时，如果当前的 <code>bucket</code> 等于 <code>buckes</code> 的第一个元素，则直接跳转至 <code>JumpMiss</code>，此时的<code>$0</code>是<code>normal</code>，也是直接跳转至<code>__objc_msgSend_uncached</code>，即进入<code>慢速查找流程</code></p></li></ul></li></ul><blockquote><p>两次循环的目的：防止不断循环的过程中多线程并发，正好缓存更新了</p></blockquote><p>在这篇文章<a href=http://www.mulle-kybernetik.com/artikel/Optimization/opti-9.html target=_blank rel=noopener>Obj-C Optimization: The faster objc_msgSend</a>中看到了这样一段C版本的objc_msgSend的源码。</p><div class=highlight><pre class=chroma><code class=language-c data-lang=c><span class=cp>#include</span> <span class=cpf>&lt;objc/objc-runtime.h&gt;</span><span class=cp>
+</span><span class=cp></span>
+<span class=n>id</span>  <span class=nf>c_objc_msgSend</span><span class=p>(</span> <span class=k>struct</span> <span class=n>objc_class</span> <span class=cm>/* ahem */</span> <span class=o>*</span><span class=n>self</span><span class=p>,</span> <span class=n>SEL</span> <span class=n>_cmd</span><span class=p>,</span> <span class=p>...)</span>
+<span class=p>{</span>
+   <span class=k>struct</span> <span class=n>objc_class</span>    <span class=o>*</span><span class=n>cls</span><span class=p>;</span>
+   <span class=k>struct</span> <span class=n>objc_cache</span>    <span class=o>*</span><span class=n>cache</span><span class=p>;</span>
+   <span class=kt>unsigned</span> <span class=kt>int</span>         <span class=n>hash</span><span class=p>;</span>
+   <span class=k>struct</span> <span class=n>objc_method</span>   <span class=o>*</span><span class=n>method</span><span class=p>;</span>   
+   <span class=kt>unsigned</span> <span class=kt>int</span>         <span class=n>index</span><span class=p>;</span>
+   
+   <span class=k>if</span><span class=p>(</span> <span class=n>self</span><span class=p>)</span>
+   <span class=p>{</span>
+      <span class=n>cls</span>   <span class=o>=</span> <span class=n>self</span><span class=o>-&gt;</span><span class=n>isa</span><span class=p>;</span>
+      <span class=n>cache</span> <span class=o>=</span> <span class=n>cls</span><span class=o>-&gt;</span><span class=n>cache</span><span class=p>;</span>
+      <span class=n>hash</span>  <span class=o>=</span> <span class=n>cache</span><span class=o>-&gt;</span><span class=n>mask</span><span class=p>;</span>
+      <span class=n>index</span> <span class=o>=</span> <span class=p>(</span><span class=kt>unsigned</span> <span class=kt>int</span><span class=p>)</span> <span class=n>_cmd</span> <span class=o>&amp;</span> <span class=n>hash</span><span class=p>;</span>
+      
+      <span class=k>do</span>
+      <span class=p>{</span>
+         <span class=n>method</span> <span class=o>=</span> <span class=n>cache</span><span class=o>-&gt;</span><span class=n>buckets</span><span class=p>[</span> <span class=n>index</span><span class=p>];</span>
+         <span class=k>if</span><span class=p>(</span> <span class=o>!</span> <span class=n>method</span><span class=p>)</span>
+            <span class=k>goto</span> <span class=n>recache</span><span class=p>;</span>
+         <span class=n>index</span> <span class=o>=</span> <span class=p>(</span><span class=n>index</span> <span class=o>+</span> <span class=mi>1</span><span class=p>)</span> <span class=o>&amp;</span> <span class=n>cache</span><span class=o>-&gt;</span><span class=n>mask</span><span class=p>;</span>
+      <span class=p>}</span>
+      <span class=k>while</span><span class=p>(</span> <span class=n>method</span><span class=o>-&gt;</span><span class=n>method_name</span> <span class=o>!=</span> <span class=n>_cmd</span><span class=p>);</span>
+      <span class=k>return</span><span class=p>(</span> <span class=p>(</span><span class=o>*</span><span class=n>method</span><span class=o>-&gt;</span><span class=n>method_imp</span><span class=p>)(</span> <span class=p>(</span><span class=n>id</span><span class=p>)</span> <span class=n>self</span><span class=p>,</span> <span class=n>_cmd</span><span class=p>));</span>
+   <span class=p>}</span>
+   <span class=k>return</span><span class=p>(</span> <span class=p>(</span><span class=n>id</span><span class=p>)</span> <span class=n>self</span><span class=p>);</span>
+
+<span class=nl>recache</span><span class=p>:</span>
+   <span class=cm>/* ... */</span>
+   <span class=k>return</span><span class=p>(</span> <span class=mi>0</span><span class=p>);</span>
+<span class=p>}</span>
+</code></pre></div><p>虽然<code>objc4</code>的版本有所变化，但是基本的流程上大致是相似的，可以参考理解。</p><p>同时，之前分析 cache_t 中的 <code>cache_t::insert</code>实现方法缓存和<code>objc_msgSend</code>汇编方法查找流程，正好是相互呼应的</p><p><strong>快速查找流程——示意图</strong></p><p><img src=https://w-md.imzsy.design/%E5%BF%AB%E9%80%9F%E6%B5%81%E7%A8%8B-0843823.png alt=快速流程></p><h4 id=慢速查找流程><a href=#慢速查找流程 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>慢速查找流程</h4><p>上面快速流程中，如果没有击中缓存(<code>CacheHit</code>)，会来到<code>CheckMiss</code>或<code>JumpMiss</code></p><p><code>CheckMiss</code>源码</p><div class=highlight><pre class=chroma><code class=language-asm data-lang=asm><span class=na>.macro</span> <span class=no>CheckMiss</span>
+	<span class=err>//</span> <span class=nf>miss</span> <span class=no>if</span> <span class=no>bucket-</span><span class=err>&gt;</span><span class=no>sel</span> <span class=err>==</span> <span class=mi>0</span>
+<span class=na>.if</span> <span class=no>$0</span> <span class=err>==</span> <span class=no>GETIMP</span>
+	<span class=nf>cbz</span>	<span class=no>p9</span><span class=p>,</span> <span class=no>LGetImpMiss</span>
+<span class=na>.elseif</span> <span class=no>$0</span> <span class=err>==</span> <span class=no>NORMAL</span>
+	<span class=nf>cbz</span>	<span class=no>p9</span><span class=p>,</span> <span class=no>__objc_msgSend_uncached</span>
+<span class=na>.elseif</span> <span class=no>$0</span> <span class=err>==</span> <span class=no>LOOKUP</span>
+	<span class=nf>cbz</span>	<span class=no>p9</span><span class=p>,</span> <span class=no>__objc_msgLookup_uncached</span>
+<span class=na>.else</span>
+<span class=na>.abort</span> <span class=no>oops</span>
+<span class=na>.endif</span>
+<span class=na>.endmacro</span>
+</code></pre></div><p><code>JumpMiss</code>源码</p><div class=highlight><pre class=chroma><code class=language-asm data-lang=asm><span class=na>.macro</span> <span class=no>JumpMiss</span>
+<span class=na>.if</span> <span class=no>$0</span> <span class=err>==</span> <span class=no>GETIMP</span>
+	<span class=nf>b</span>	<span class=no>LGetImpMiss</span>
+<span class=na>.elseif</span> <span class=no>$0</span> <span class=err>==</span> <span class=no>NORMAL</span>
+	<span class=nf>b</span>	<span class=no>__objc_msgSend_uncached</span>
+<span class=na>.elseif</span> <span class=no>$0</span> <span class=err>==</span> <span class=no>LOOKUP</span>
+	<span class=nf>b</span>	<span class=no>__objc_msgLookup_uncached</span>
+<span class=na>.else</span>
+<span class=na>.abort</span> <span class=no>oops</span>
+<span class=na>.endif</span>
+<span class=na>.endmacro</span>
+</code></pre></div><blockquote><p>当<code>NORMAL</code>时，<code>CheckMiss</code>和<code>JumpMiss</code>都走<code>__objc_msgSend_uncached</code></p></blockquote><p><strong>__objc_msgSend_uncached</strong></p><div class=highlight><pre class=chroma><code class=language-asm data-lang=asm><span class=nf>STATIC_ENTRY</span> <span class=no>__objc_msgSend_uncached</span>
+<span class=nf>UNWIND</span> <span class=no>__objc_msgSend_uncached</span><span class=p>,</span> <span class=no>FrameWithNoSaves</span>
+
+<span class=err>//</span> <span class=nf>THIS</span> <span class=no>IS</span> <span class=no>NOT</span> <span class=no>A</span> <span class=no>CALLABLE</span> <span class=no>C</span> <span class=no>FUNCTION</span>
+<span class=err>//</span> <span class=nf>Out-of-band</span> <span class=no>p16</span> <span class=no>is</span> <span class=no>the</span> <span class=no>class</span> <span class=no>to</span> <span class=no>search</span>
+
+<span class=nf>MethodTableLookup</span>
+<span class=nf>TailCallFunctionPointer</span> <span class=no>x17</span>
+
+<span class=nf>END_ENTRY</span> <span class=no>__objc_msgSend_uncached</span>
+
+
+<span class=nf>STATIC_ENTRY</span> <span class=no>__objc_msgLookup_uncached</span>
+<span class=nf>UNWIND</span> <span class=no>__objc_msgLookup_uncached</span><span class=p>,</span> <span class=no>FrameWithNoSaves</span>
+</code></pre></div><p>从<code>__objc_msgSend_uncached</code>汇编源码中，会发现接下来执行<code>MethodTableLookup</code>和<code>TailCallFunctionPointer x17</code>指令</p><p><strong>MethodTableLookup</strong></p><div class=highlight><pre class=chroma><code class=language-asm data-lang=asm><span class=na>.macro</span> <span class=no>MethodTableLookup</span>
+	
+	<span class=err>//</span> <span class=nf>push</span> <span class=no>frame</span>
+	<span class=nf>SignLR</span>
+	<span class=nf>stp</span>	<span class=no>fp</span><span class=p>,</span> <span class=no>lr</span><span class=p>,</span> <span class=p>[</span><span class=no>sp</span><span class=p>,</span> <span class=c>#-16]!
+</span><span class=c></span>	<span class=no>mov</span>	<span class=no>fp</span><span class=p>,</span> <span class=no>sp</span>
+
+	<span class=err>//</span> <span class=nf>save</span> <span class=no>parameter</span> <span class=no>registers</span><span class=p>:</span> <span class=no>x0..x8</span><span class=p>,</span> <span class=no>q0..q7</span>
+	<span class=na>...</span>
+
+	<span class=err>//</span> <span class=nf>lookUpImpOrForward</span><span class=p>(</span><span class=no>obj</span><span class=p>,</span> <span class=no>sel</span><span class=p>,</span> <span class=no>cls</span><span class=p>,</span> <span class=no>LOOKUP_INITIALIZE</span> <span class=err>|</span> <span class=no>LOOKUP_RESOLVER</span><span class=p>)</span>
+	<span class=err>//</span> <span class=nf>receiver</span> <span class=no>and</span> <span class=no>selector</span> <span class=no>already</span> <span class=no>in</span> <span class=no>x0</span> <span class=no>and</span> <span class=no>x1</span>
+	<span class=nf>mov</span>	<span class=no>x2</span><span class=p>,</span> <span class=no>x16</span>
+	<span class=nf>mov</span>	<span class=no>x3</span><span class=p>,</span> <span class=c>#3
+</span><span class=c></span>	<span class=no>bl</span>	<span class=no>_lookUpImpOrForward</span>
+
+	<span class=err>//</span> <span class=nf>IMP</span> <span class=no>in</span> <span class=no>x0</span>
+	<span class=nf>mov</span>	<span class=no>x17</span><span class=p>,</span> <span class=no>x0</span>
+	
+	<span class=err>//</span> <span class=nf>restore</span> <span class=no>registers</span> <span class=no>and</span> <span class=no>return</span>
+	<span class=na>...</span>
+
+	<span class=nf>mov</span>	<span class=no>sp</span><span class=p>,</span> <span class=no>fp</span>
+	<span class=nf>ldp</span>	<span class=no>fp</span><span class=p>,</span> <span class=no>lr</span><span class=p>,</span> <span class=p>[</span><span class=no>sp</span><span class=p>],</span> <span class=c>#16
+</span><span class=c></span>	<span class=no>AuthenticateLR</span>
+
+<span class=na>.endmacro</span>
+</code></pre></div><p><code>MethodTableLookup</code>也是一个接口层宏，主要用于保存环境与准备参数，然后去调用<code>_lookUpImpOrForward</code>函数(在objc-runtime-new.mm中)</p><p>这里会将 <code>receiver，selector，class</code> 三个参数取 <code>x0，x1, x2</code> 的值，<code>behavior</code>设置为 3，即<code>LOOKUP_INITIALIZE | LOOKUP_RESOLVER</code></p><p>调用<code>lookUpImpOrForward(obj, sel, cls, LOOKUP_INITIALIZE | LOOKUP_RESOLVER)</code>，将返回的 <code>IMP</code> 存到 <code>x17</code></p><p><strong><code>lookUpImpOrForward</code>函数实现</strong>，是消息慢速查找的核心所在</p><div class=highlight><pre class=chroma><code class=language-c++ data-lang=c++><span class=cm>/***********************************************************************
+</span><span class=cm>* lookUpImpOrForward.
+</span><span class=cm>* The standard IMP lookup. 
+</span><span class=cm>* Without LOOKUP_INITIALIZE: tries to avoid +initialize (but sometimes fails)
+</span><span class=cm>* Without LOOKUP_CACHE: skips optimistic unlocked lookup (but uses cache elsewhere)
+</span><span class=cm>* Most callers should use LOOKUP_INITIALIZE and LOOKUP_CACHE
+</span><span class=cm>* inst is an instance of cls or a subclass thereof, or nil if none is known. 
+</span><span class=cm>*   If cls is an un-initialized metaclass then a non-nil inst is faster.
+</span><span class=cm>* May return _objc_msgForward_impcache. IMPs destined for external use 
+</span><span class=cm>*   must be converted to _objc_msgForward or _objc_msgForward_stret.
+</span><span class=cm>*   If you don&#39;t want forwarding at all, use LOOKUP_NIL.
+</span><span class=cm>**********************************************************************/</span>
+<span class=n>IMP</span> <span class=nf>lookUpImpOrForward</span><span class=p>(</span><span class=n>id</span> <span class=n>inst</span><span class=p>,</span> <span class=n>SEL</span> <span class=n>sel</span><span class=p>,</span> <span class=n>Class</span> <span class=n>cls</span><span class=p>,</span> <span class=kt>int</span> <span class=n>behavior</span><span class=p>)</span>
+<span class=p>{</span>
+    <span class=k>const</span> <span class=n>IMP</span> <span class=n>forward_imp</span> <span class=o>=</span> <span class=p>(</span><span class=n>IMP</span><span class=p>)</span><span class=n>_objc_msgForward_impcache</span><span class=p>;</span>
+    <span class=n>IMP</span> <span class=n>imp</span> <span class=o>=</span> <span class=n>nil</span><span class=p>;</span>
+    <span class=n>Class</span> <span class=n>curClass</span><span class=p>;</span>
+
+    <span class=n>runtimeLock</span><span class=p>.</span><span class=n>assertUnlocked</span><span class=p>();</span>
+
+    <span class=c1>// Optimistic cache lookup
+</span><span class=c1></span>    <span class=k>if</span> <span class=p>(</span><span class=n>fastpath</span><span class=p>(</span><span class=n>behavior</span> <span class=o>&amp;</span> <span class=n>LOOKUP_CACHE</span><span class=p>))</span> <span class=p>{</span>
+        <span class=n>imp</span> <span class=o>=</span> <span class=n>cache_getImp</span><span class=p>(</span><span class=n>cls</span><span class=p>,</span> <span class=n>sel</span><span class=p>);</span>
+        <span class=k>if</span> <span class=p>(</span><span class=n>imp</span><span class=p>)</span> <span class=k>goto</span> <span class=n>done_nolock</span><span class=p>;</span>
+    <span class=p>}</span>
+
+    <span class=c1>// runtimeLock is held during isRealized and isInitialized checking
+</span><span class=c1></span>    <span class=c1>// to prevent races against concurrent realization.
+</span><span class=c1></span>
+    <span class=c1>// runtimeLock is held during method search to make
+</span><span class=c1></span>    <span class=c1>// method-lookup + cache-fill atomic with respect to method addition.
+</span><span class=c1></span>    <span class=c1>// Otherwise, a category could be added but ignored indefinitely because
+</span><span class=c1></span>    <span class=c1>// the cache was re-filled with the old value after the cache flush on
+</span><span class=c1></span>    <span class=c1>// behalf of the category.
+</span><span class=c1></span>
+    <span class=n>runtimeLock</span><span class=p>.</span><span class=n>lock</span><span class=p>();</span>
+
+    <span class=c1>// We don&#39;t want people to be able to craft a binary blob that looks like
+</span><span class=c1></span>    <span class=c1>// a class but really isn&#39;t one and do a CFI attack.
+</span><span class=c1></span>    <span class=c1>//
+</span><span class=c1></span>    <span class=c1>// To make these harder we want to make sure this is a class that was
+</span><span class=c1></span>    <span class=c1>// either built into the binary or legitimately registered through
+</span><span class=c1></span>    <span class=c1>// objc_duplicateClass, objc_initializeClassPair or objc_allocateClassPair.
+</span><span class=c1></span>    <span class=c1>//
+</span><span class=c1></span>    <span class=c1>// TODO: this check is quite costly during process startup.
+</span><span class=c1></span>    <span class=n>checkIsKnownClass</span><span class=p>(</span><span class=n>cls</span><span class=p>);</span>
+
+    <span class=k>if</span> <span class=p>(</span><span class=n>slowpath</span><span class=p>(</span><span class=o>!</span><span class=n>cls</span><span class=o>-&gt;</span><span class=n>isRealized</span><span class=p>()))</span> <span class=p>{</span>
+        <span class=n>cls</span> <span class=o>=</span> <span class=n>realizeClassMaybeSwiftAndLeaveLocked</span><span class=p>(</span><span class=n>cls</span><span class=p>,</span> <span class=n>runtimeLock</span><span class=p>);</span>
+        <span class=c1>// runtimeLock may have been dropped but is now locked again
+</span><span class=c1></span>    <span class=p>}</span>
+
+    <span class=k>if</span> <span class=p>(</span><span class=n>slowpath</span><span class=p>((</span><span class=n>behavior</span> <span class=o>&amp;</span> <span class=n>LOOKUP_INITIALIZE</span><span class=p>)</span> <span class=o>&amp;&amp;</span> <span class=o>!</span><span class=n>cls</span><span class=o>-&gt;</span><span class=n>isInitialized</span><span class=p>()))</span> <span class=p>{</span>
+        <span class=n>cls</span> <span class=o>=</span> <span class=n>initializeAndLeaveLocked</span><span class=p>(</span><span class=n>cls</span><span class=p>,</span> <span class=n>inst</span><span class=p>,</span> <span class=n>runtimeLock</span><span class=p>);</span>
+        <span class=c1>// runtimeLock may have been dropped but is now locked again
+</span><span class=c1></span>
+        <span class=c1>// If sel == initialize, class_initialize will send +initialize and 
+</span><span class=c1></span>        <span class=c1>// then the messenger will send +initialize again after this 
+</span><span class=c1></span>        <span class=c1>// procedure finishes. Of course, if this is not being called 
+</span><span class=c1></span>        <span class=c1>// from the messenger then it won&#39;t happen. 2778172
+</span><span class=c1></span>    <span class=p>}</span>
+
+    <span class=n>runtimeLock</span><span class=p>.</span><span class=n>assertLocked</span><span class=p>();</span>
+    <span class=n>curClass</span> <span class=o>=</span> <span class=n>cls</span><span class=p>;</span>
+
+    <span class=c1>// The code used to lookpu the class&#39;s cache again right after
+</span><span class=c1></span>    <span class=c1>// we take the lock but for the vast majority of the cases
+</span><span class=c1></span>    <span class=c1>// evidence shows this is a miss most of the time, hence a time loss.
+</span><span class=c1></span>    <span class=c1>//
+</span><span class=c1></span>    <span class=c1>// The only codepath calling into this without having performed some
+</span><span class=c1></span>    <span class=c1>// kind of cache lookup is class_getInstanceMethod().
+</span><span class=c1></span>
+    <span class=k>for</span> <span class=p>(</span><span class=kt>unsigned</span> <span class=n>attempts</span> <span class=o>=</span> <span class=n>unreasonableClassCount</span><span class=p>();;)</span> <span class=p>{</span>
+        <span class=c1>// curClass method list.
+</span><span class=c1></span>        <span class=n>Method</span> <span class=n>meth</span> <span class=o>=</span> <span class=n>getMethodNoSuper_nolock</span><span class=p>(</span><span class=n>curClass</span><span class=p>,</span> <span class=n>sel</span><span class=p>);</span>
+        <span class=k>if</span> <span class=p>(</span><span class=n>meth</span><span class=p>)</span> <span class=p>{</span>
+            <span class=n>imp</span> <span class=o>=</span> <span class=n>meth</span><span class=o>-&gt;</span><span class=n>imp</span><span class=p>;</span>
+            <span class=k>goto</span> <span class=n>done</span><span class=p>;</span>
+        <span class=p>}</span>
+
+        <span class=k>if</span> <span class=p>(</span><span class=n>slowpath</span><span class=p>((</span><span class=n>curClass</span> <span class=o>=</span> <span class=n>curClass</span><span class=o>-&gt;</span><span class=n>superclass</span><span class=p>)</span> <span class=o>==</span> <span class=n>nil</span><span class=p>))</span> <span class=p>{</span>
+            <span class=c1>// No implementation found, and method resolver didn&#39;t help.
+</span><span class=c1></span>            <span class=c1>// Use forwarding.
+</span><span class=c1></span>            <span class=n>imp</span> <span class=o>=</span> <span class=n>forward_imp</span><span class=p>;</span>
+            <span class=k>break</span><span class=p>;</span>
+        <span class=p>}</span>
+
+        <span class=c1>// Halt if there is a cycle in the superclass chain.
+</span><span class=c1></span>        <span class=k>if</span> <span class=p>(</span><span class=n>slowpath</span><span class=p>(</span><span class=o>--</span><span class=n>attempts</span> <span class=o>==</span> <span class=mi>0</span><span class=p>))</span> <span class=p>{</span>
+            <span class=n>_objc_fatal</span><span class=p>(</span><span class=s>&#34;Memory corruption in class list.&#34;</span><span class=p>);</span>
+        <span class=p>}</span>
+
+        <span class=c1>// Superclass cache.
+</span><span class=c1></span>        <span class=n>imp</span> <span class=o>=</span> <span class=n>cache_getImp</span><span class=p>(</span><span class=n>curClass</span><span class=p>,</span> <span class=n>sel</span><span class=p>);</span>
+        <span class=k>if</span> <span class=p>(</span><span class=n>slowpath</span><span class=p>(</span><span class=n>imp</span> <span class=o>==</span> <span class=n>forward_imp</span><span class=p>))</span> <span class=p>{</span>
+            <span class=c1>// Found a forward:: entry in a superclass.
+</span><span class=c1></span>            <span class=c1>// Stop searching, but don&#39;t cache yet; call method
+</span><span class=c1></span>            <span class=c1>// resolver for this class first.
+</span><span class=c1></span>            <span class=k>break</span><span class=p>;</span>
+        <span class=p>}</span>
+        <span class=k>if</span> <span class=p>(</span><span class=n>fastpath</span><span class=p>(</span><span class=n>imp</span><span class=p>))</span> <span class=p>{</span>
+            <span class=c1>// Found the method in a superclass. Cache it in this class.
+</span><span class=c1></span>            <span class=k>goto</span> <span class=n>done</span><span class=p>;</span>
+        <span class=p>}</span>
+    <span class=p>}</span>
+
+    <span class=c1>// No implementation found. Try method resolver once.
+</span><span class=c1></span>
+    <span class=k>if</span> <span class=p>(</span><span class=n>slowpath</span><span class=p>(</span><span class=n>behavior</span> <span class=o>&amp;</span> <span class=n>LOOKUP_RESOLVER</span><span class=p>))</span> <span class=p>{</span>
+        <span class=n>behavior</span> <span class=o>^=</span> <span class=n>LOOKUP_RESOLVER</span><span class=p>;</span>
+        <span class=k>return</span> <span class=n>resolveMethod_locked</span><span class=p>(</span><span class=n>inst</span><span class=p>,</span> <span class=n>sel</span><span class=p>,</span> <span class=n>cls</span><span class=p>,</span> <span class=n>behavior</span><span class=p>);</span>
+    <span class=p>}</span>
+
+ <span class=nl>done</span><span class=p>:</span>
+    <span class=n>log_and_fill_cache</span><span class=p>(</span><span class=n>cls</span><span class=p>,</span> <span class=n>imp</span><span class=p>,</span> <span class=n>sel</span><span class=p>,</span> <span class=n>inst</span><span class=p>,</span> <span class=n>curClass</span><span class=p>);</span>
+    <span class=n>runtimeLock</span><span class=p>.</span><span class=n>unlock</span><span class=p>();</span>
+ <span class=nl>done_nolock</span><span class=p>:</span>
+    <span class=k>if</span> <span class=p>(</span><span class=n>slowpath</span><span class=p>((</span><span class=n>behavior</span> <span class=o>&amp;</span> <span class=n>LOOKUP_NIL</span><span class=p>)</span> <span class=o>&amp;&amp;</span> <span class=n>imp</span> <span class=o>==</span> <span class=n>forward_imp</span><span class=p>))</span> <span class=p>{</span>
+        <span class=k>return</span> <span class=n>nil</span><span class=p>;</span>
+    <span class=p>}</span>
+    <span class=k>return</span> <span class=n>imp</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div><p><strong>逐行讲解</strong></p><p><code>runtimeLock.assertUnlocked()</code>是加一个读写锁，保证线程安全</p><div class=highlight><pre class=chroma><code class=language-c++ data-lang=c++><span class=k>if</span> <span class=p>(</span><span class=n>fastpath</span><span class=p>(</span><span class=n>behavior</span> <span class=o>&amp;</span> <span class=n>LOOKUP_CACHE</span><span class=p>))</span> <span class=p>{</span>
+    <span class=n>imp</span> <span class=o>=</span> <span class=n>cache_getImp</span><span class=p>(</span><span class=n>cls</span><span class=p>,</span> <span class=n>sel</span><span class=p>);</span>
+    <span class=k>if</span> <span class=p>(</span><span class=n>imp</span><span class=p>)</span> <span class=k>goto</span> <span class=n>done_nolock</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div><p>会根据传入的 <code>behavior & LOOKUP_CACHE</code> 值，如果值不为 0，那么会调用 <code>cache_getImp</code> 方法去从缓存里面查找 imp。</p><p>​ - 如果存在，则会跳转到 <code>done_nolock</code>，返回 imp</p><div class=highlight><pre class=chroma><code class=language-asm data-lang=asm><span class=nf>STATIC_ENTRY</span> <span class=no>_cache_getImp</span>
+
+<span class=nf>GetClassFromIsa_p16</span> <span class=no>p0</span>
+<span class=nf>CacheLookup</span> <span class=no>GETIMP</span><span class=p>,</span> <span class=no>_cache_getImp</span>
+
+<span class=nl>LGetImpMiss:</span>
+<span class=nf>mov</span>	<span class=no>p0</span><span class=p>,</span> <span class=c>#0
+</span><span class=c></span><span class=no>ret</span>
+
+<span class=nf>END_ENTRY</span> <span class=no>_cache_getImp</span>
+</code></pre></div><p><code>checkIsKnownClass(cls)</code>是判断当前传入的类 cls 是否是已知的类（类已经被加载到内存中，后面再介绍）</p><div class=highlight><pre class=chroma><code class=language-c++ data-lang=c++><span class=k>if</span> <span class=p>(</span><span class=n>slowpath</span><span class=p>(</span><span class=o>!</span><span class=n>cls</span><span class=o>-&gt;</span><span class=n>isRealized</span><span class=p>()))</span> <span class=p>{</span>
+    <span class=n>cls</span> <span class=o>=</span> <span class=n>realizeClassMaybeSwiftAndLeaveLocked</span><span class=p>(</span><span class=n>cls</span><span class=p>,</span> <span class=n>runtimeLock</span><span class=p>);</span>
+<span class=p>}</span>
+</code></pre></div><p><code>cls->isRealized()</code>判断类是否已经申请 class_rw_t 的可读写空间，如果没有则调用<code>realizeClassMaybeSwiftAndLeaveLocked</code>方法申请class_rw_t 的可读写空间，这是为<strong>查找方法imp</strong>做准备条件</p><div class=highlight><pre class=chroma><code class=language-c++ data-lang=c++><span class=k>if</span> <span class=p>(</span><span class=n>slowpath</span><span class=p>((</span><span class=n>behavior</span> <span class=o>&amp;</span> <span class=n>LOOKUP_INITIALIZE</span><span class=p>)</span> <span class=o>&amp;&amp;</span> <span class=o>!</span><span class=n>cls</span><span class=o>-&gt;</span><span class=n>isInitialized</span><span class=p>()))</span> <span class=p>{</span>
+    <span class=n>cls</span> <span class=o>=</span> <span class=n>initializeAndLeaveLocked</span><span class=p>(</span><span class=n>cls</span><span class=p>,</span> <span class=n>inst</span><span class=p>,</span> <span class=n>runtimeLock</span><span class=p>);</span>
+<span class=p>}</span>
+</code></pre></div><p>判断类<code>cls->isInitialized()</code>是否初始化，如果没有调用<code>initializeAndLeaveLocked</code>方法进行初始化</p><p><code>runtimeLock.assertLocked();</code>这里加读锁。因为在运行时中会动态的添加方法，为了保证线程安全，所以要加锁。</p><div class=highlight><pre class=chroma><code class=language-c++ data-lang=c++><span class=c1>// unreasonableClassCount 获取类的迭代上限
+</span><span class=c1></span><span class=k>for</span> <span class=p>(</span><span class=kt>unsigned</span> <span class=n>attempts</span> <span class=o>=</span> <span class=n>unreasonableClassCount</span><span class=p>();;)</span> <span class=p>{</span>    
+    <span class=c1>// 从当前类的方法列表中查找
+</span><span class=c1></span>    <span class=n>Method</span> <span class=n>meth</span> <span class=o>=</span> <span class=n>getMethodNoSuper_nolock</span><span class=p>(</span><span class=n>curClass</span><span class=p>,</span> <span class=n>sel</span><span class=p>);</span>
+    <span class=k>if</span> <span class=p>(</span><span class=n>meth</span><span class=p>)</span> <span class=p>{</span>
+        <span class=n>imp</span> <span class=o>=</span> <span class=n>meth</span><span class=o>-&gt;</span><span class=n>imp</span><span class=p>;</span>
+        <span class=k>goto</span> <span class=n>done</span><span class=p>;</span>
+    <span class=p>}</span>
+
+    <span class=c1>// 当前类 = 当前的父类，并判断父类是否为 nil
+</span><span class=c1></span>    <span class=k>if</span> <span class=p>(</span><span class=n>slowpath</span><span class=p>((</span><span class=n>curClass</span> <span class=o>=</span> <span class=n>curClass</span><span class=o>-&gt;</span><span class=n>superclass</span><span class=p>)</span> <span class=o>==</span> <span class=n>nil</span><span class=p>))</span> <span class=p>{</span>
+        <span class=c1>//--未找到方法实现，方法解析器也不行，使用转发
+</span><span class=c1></span>        <span class=n>imp</span> <span class=o>=</span> <span class=n>forward_imp</span><span class=p>;</span>
+        <span class=k>break</span><span class=p>;</span>
+    <span class=p>}</span>
+    
+    <span class=c1>// 如果父类链中存在循环，则停止
+</span><span class=c1></span>    <span class=k>if</span> <span class=p>(</span><span class=n>slowpath</span><span class=p>(</span><span class=o>--</span><span class=n>attempts</span> <span class=o>==</span> <span class=mi>0</span><span class=p>))</span> <span class=p>{</span>
+        <span class=n>_objc_fatal</span><span class=p>(</span><span class=s>&#34;Memory corruption in class list.&#34;</span><span class=p>);</span>
+    <span class=p>}</span>
+
+    <span class=c1>// 从父类的缓存查找方法，即进入父类的快速查找流程
+</span><span class=c1></span>    <span class=n>imp</span> <span class=o>=</span> <span class=n>cache_getImp</span><span class=p>(</span><span class=n>curClass</span><span class=p>,</span> <span class=n>sel</span><span class=p>);</span>
+    <span class=k>if</span> <span class=p>(</span><span class=n>slowpath</span><span class=p>(</span><span class=n>imp</span> <span class=o>==</span> <span class=n>forward_imp</span><span class=p>))</span> <span class=p>{</span>
+        <span class=c1>// 如果在父类中找到了forward，则停止查找，且不缓存，首先调用此类的方法解析器
+</span><span class=c1></span>        <span class=k>break</span><span class=p>;</span>
+    <span class=p>}</span>
+    <span class=k>if</span> <span class=p>(</span><span class=n>fastpath</span><span class=p>(</span><span class=n>imp</span><span class=p>))</span> <span class=p>{</span>
+        <span class=c1>//如果在父类中，找到了此方法，将其存储到cache中
+</span><span class=c1></span>        <span class=k>goto</span> <span class=n>done</span><span class=p>;</span>
+    <span class=p>}</span>
+<span class=p>}</span>
+
+<span class=nl>done</span><span class=p>:</span>
+  <span class=c1>// 将方法进行缓存
+</span><span class=c1></span>  <span class=n>log_and_fill_cache</span><span class=p>(</span><span class=n>cls</span><span class=p>,</span> <span class=n>imp</span><span class=p>,</span> <span class=n>sel</span><span class=p>,</span> <span class=n>inst</span><span class=p>,</span> <span class=n>curClass</span><span class=p>);</span>
+  <span class=c1>// 解锁
+</span><span class=c1></span>  <span class=n>runtimeLock</span><span class=p>.</span><span class=n>unlock</span><span class=p>();</span>
+</code></pre></div><p>这是<strong>消息慢速查找的关键</strong>：</p><ol><li><code>getMethodNoSuper_nolock</code>：从当前类的方法列表中查找，找到则返回 <code>IMP</code>，跳转到 <code>done</code></li><li>将当前类设置为当前类的父类，并判断类是否为 nil<ul><li>类为 nil，将 <code>imp</code> 等于 <code>forward_imp</code></li></ul></li><li>判断父类中是否存在循环，如果存在，抛出异常</li><li><code>cache_getImp</code>：从父类的缓存中查找方法</li></ol><div class=highlight><pre class=chroma><code class=language-c++ data-lang=c++><span class=k>static</span> <span class=n>method_t</span> <span class=o>*</span>
+<span class=nf>getMethodNoSuper_nolock</span><span class=p>(</span><span class=n>Class</span> <span class=n>cls</span><span class=p>,</span> <span class=n>SEL</span> <span class=n>sel</span><span class=p>)</span>
+<span class=p>{</span>
+    <span class=n>runtimeLock</span><span class=p>.</span><span class=n>assertLocked</span><span class=p>();</span>
+
+    <span class=n>ASSERT</span><span class=p>(</span><span class=n>cls</span><span class=o>-&gt;</span><span class=n>isRealized</span><span class=p>());</span>
+
+    <span class=k>auto</span> <span class=k>const</span> <span class=n>methods</span> <span class=o>=</span> <span class=n>cls</span><span class=o>-&gt;</span><span class=n>data</span><span class=p>()</span><span class=o>-&gt;</span><span class=n>methods</span><span class=p>();</span>
+    <span class=k>for</span> <span class=p>(</span><span class=k>auto</span> <span class=n>mlists</span> <span class=o>=</span> <span class=n>methods</span><span class=p>.</span><span class=n>beginLists</span><span class=p>(),</span>
+              <span class=n>end</span> <span class=o>=</span> <span class=n>methods</span><span class=p>.</span><span class=n>endLists</span><span class=p>();</span>
+         <span class=n>mlists</span> <span class=o>!=</span> <span class=n>end</span><span class=p>;</span>
+         <span class=o>++</span><span class=n>mlists</span><span class=p>)</span>
+    <span class=p>{</span>
+        <span class=n>method_t</span> <span class=o>*</span><span class=n>m</span> <span class=o>=</span> <span class=n>search_method_list_inline</span><span class=p>(</span><span class=o>*</span><span class=n>mlists</span><span class=p>,</span> <span class=n>sel</span><span class=p>);</span>
+        <span class=k>if</span> <span class=p>(</span><span class=n>m</span><span class=p>)</span> <span class=k>return</span> <span class=n>m</span><span class=p>;</span>
+    <span class=p>}</span>
+
+    <span class=k>return</span> <span class=n>nil</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div><p>这里解析一下<code>getMethodNoSuper_nolock</code>函数</p><p>在<code>getMethodNoSuper_nolock</code>会遍历一次 methods 链表，遍历过程中会调用<code>search_method_list_inline</code>函数。</p><div class=highlight><pre class=chroma><code class=language-c++ data-lang=c++>
+<span class=n>ALWAYS_INLINE</span> <span class=k>static</span> <span class=n>method_t</span> <span class=o>*</span>
+<span class=nf>search_method_list_inline</span><span class=p>(</span><span class=k>const</span> <span class=n>method_list_t</span> <span class=o>*</span><span class=n>mlist</span><span class=p>,</span> <span class=n>SEL</span> <span class=n>sel</span><span class=p>)</span>
+<span class=p>{</span>
+    <span class=kt>int</span> <span class=n>methodListIsFixedUp</span> <span class=o>=</span> <span class=n>mlist</span><span class=o>-&gt;</span><span class=n>isFixedUp</span><span class=p>();</span>
+    <span class=kt>int</span> <span class=n>methodListHasExpectedSize</span> <span class=o>=</span> <span class=n>mlist</span><span class=o>-&gt;</span><span class=n>entsize</span><span class=p>()</span> <span class=o>==</span> <span class=k>sizeof</span><span class=p>(</span><span class=n>method_t</span><span class=p>);</span>
+    
+    <span class=k>if</span> <span class=p>(</span><span class=n>fastpath</span><span class=p>(</span><span class=n>methodListIsFixedUp</span> <span class=o>&amp;&amp;</span> <span class=n>methodListHasExpectedSize</span><span class=p>))</span> <span class=p>{</span>
+        <span class=k>return</span> <span class=n>findMethodInSortedMethodList</span><span class=p>(</span><span class=n>sel</span><span class=p>,</span> <span class=n>mlist</span><span class=p>);</span>
+    <span class=p>}</span> <span class=k>else</span> <span class=p>{</span>
+        <span class=c1>// Linear search of unsorted method list
+</span><span class=c1></span>        <span class=k>for</span> <span class=p>(</span><span class=k>auto</span><span class=o>&amp;</span> <span class=nl>meth</span> <span class=p>:</span> <span class=o>*</span><span class=n>mlist</span><span class=p>)</span> <span class=p>{</span>
+            <span class=k>if</span> <span class=p>(</span><span class=n>meth</span><span class=p>.</span><span class=n>name</span> <span class=o>==</span> <span class=n>sel</span><span class=p>)</span> <span class=k>return</span> <span class=o>&amp;</span><span class=n>meth</span><span class=p>;</span>
+        <span class=p>}</span>
+    <span class=p>}</span>
+
+<span class=cp>#if DEBUG
+</span><span class=cp></span>    <span class=c1>// sanity-check negative results
+</span><span class=c1></span>    <span class=k>if</span> <span class=p>(</span><span class=n>mlist</span><span class=o>-&gt;</span><span class=n>isFixedUp</span><span class=p>())</span> <span class=p>{</span>
+        <span class=k>for</span> <span class=p>(</span><span class=k>auto</span><span class=o>&amp;</span> <span class=nl>meth</span> <span class=p>:</span> <span class=o>*</span><span class=n>mlist</span><span class=p>)</span> <span class=p>{</span>
+            <span class=k>if</span> <span class=p>(</span><span class=n>meth</span><span class=p>.</span><span class=n>name</span> <span class=o>==</span> <span class=n>sel</span><span class=p>)</span> <span class=p>{</span>
+                <span class=n>_objc_fatal</span><span class=p>(</span><span class=s>&#34;linear search worked when binary search did not&#34;</span><span class=p>);</span>
+            <span class=p>}</span>
+        <span class=p>}</span>
+    <span class=p>}</span>
+<span class=cp>#endif
+</span><span class=cp></span>
+    <span class=k>return</span> <span class=n>nil</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div><p>在<code>search_method_list_inline</code>函数中，会判断当前 methodList 是否有序，</p><ul><li>如果有序，会调用<code>findMethodInSortedMethodList</code>方法</li><li>如果非有序，调用线性的傻瓜式遍历搜索</li></ul><div class=highlight><pre class=chroma><code class=language-c++ data-lang=c++><span class=cm>/***********************************************************************
+</span><span class=cm> * search_method_list_inline
+</span><span class=cm> **********************************************************************/</span>
+<span class=n>ALWAYS_INLINE</span> <span class=k>static</span> <span class=n>method_t</span> <span class=o>*</span>
+<span class=nf>findMethodInSortedMethodList</span><span class=p>(</span><span class=n>SEL</span> <span class=n>key</span><span class=p>,</span> <span class=k>const</span> <span class=n>method_list_t</span> <span class=o>*</span><span class=n>list</span><span class=p>)</span>
+<span class=p>{</span>
+    <span class=n>ASSERT</span><span class=p>(</span><span class=n>list</span><span class=p>);</span>
+
+    <span class=k>const</span> <span class=n>method_t</span> <span class=o>*</span> <span class=k>const</span> <span class=n>first</span> <span class=o>=</span> <span class=o>&amp;</span><span class=n>list</span><span class=o>-&gt;</span><span class=n>first</span><span class=p>;</span>
+    <span class=k>const</span> <span class=n>method_t</span> <span class=o>*</span><span class=n>base</span> <span class=o>=</span> <span class=n>first</span><span class=p>;</span>
+    <span class=k>const</span> <span class=n>method_t</span> <span class=o>*</span><span class=n>probe</span><span class=p>;</span>
+    <span class=n>uintptr_t</span> <span class=n>keyValue</span> <span class=o>=</span> <span class=p>(</span><span class=n>uintptr_t</span><span class=p>)</span><span class=n>key</span><span class=p>;</span>
+    <span class=kt>uint32_t</span> <span class=n>count</span><span class=p>;</span>
+    
+    <span class=k>for</span> <span class=p>(</span><span class=n>count</span> <span class=o>=</span> <span class=n>list</span><span class=o>-&gt;</span><span class=n>count</span><span class=p>;</span> <span class=n>count</span> <span class=o>!=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>count</span> <span class=o>&gt;&gt;=</span> <span class=mi>1</span><span class=p>)</span> <span class=p>{</span>
+        <span class=n>probe</span> <span class=o>=</span> <span class=n>base</span> <span class=o>+</span> <span class=p>(</span><span class=n>count</span> <span class=o>&gt;&gt;</span> <span class=mi>1</span><span class=p>);</span>
+        
+        <span class=n>uintptr_t</span> <span class=n>probeValue</span> <span class=o>=</span> <span class=p>(</span><span class=n>uintptr_t</span><span class=p>)</span><span class=n>probe</span><span class=o>-&gt;</span><span class=n>name</span><span class=p>;</span>
+        
+        <span class=k>if</span> <span class=p>(</span><span class=n>keyValue</span> <span class=o>==</span> <span class=n>probeValue</span><span class=p>)</span> <span class=p>{</span>
+            <span class=c1>// `probe` is a match.
+</span><span class=c1></span>            <span class=c1>// Rewind looking for the *first* occurrence of this value.
+</span><span class=c1></span>            <span class=c1>// This is required for correct category overrides.
+</span><span class=c1></span>            <span class=k>while</span> <span class=p>(</span><span class=n>probe</span> <span class=o>&gt;</span> <span class=n>first</span> <span class=o>&amp;&amp;</span> <span class=n>keyValue</span> <span class=o>==</span> <span class=p>(</span><span class=n>uintptr_t</span><span class=p>)</span><span class=n>probe</span><span class=p>[</span><span class=o>-</span><span class=mi>1</span><span class=p>].</span><span class=n>name</span><span class=p>)</span> <span class=p>{</span>
+                <span class=n>probe</span><span class=o>--</span><span class=p>;</span>
+            <span class=p>}</span>
+            <span class=k>return</span> <span class=p>(</span><span class=n>method_t</span> <span class=o>*</span><span class=p>)</span><span class=n>probe</span><span class=p>;</span>
+        <span class=p>}</span>
+        
+        <span class=k>if</span> <span class=p>(</span><span class=n>keyValue</span> <span class=o>&gt;</span> <span class=n>probeValue</span><span class=p>)</span> <span class=p>{</span>
+            <span class=n>base</span> <span class=o>=</span> <span class=n>probe</span> <span class=o>+</span> <span class=mi>1</span><span class=p>;</span>
+            <span class=n>count</span><span class=o>--</span><span class=p>;</span>
+        <span class=p>}</span>
+    <span class=p>}</span>
+    
+    <span class=k>return</span> <span class=n>nil</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div><p><code>findMethodInSortedMethodList</code>函数查找实现是一个二分查找。</p><ul><li><p><code>count >>= 1</code>，如果 count 是偶数，则值为 count / 2; 如果是奇数，则值为 (count - 1) / 2</p></li><li><p><code>count >> 1</code> 相当于 <code>count / 2</code></p></li><li><p>当<code>keyValue == probeValue</code>，会先进入 while 循环，进行分类重名方法的过滤，再返回</p></li></ul><p>如果父类找到 NSObject 都没有查找到<code>IMP</code>，那么就会调用<code>resolveMethod_locked</code>，进行<strong>动态方法解析</strong>。</p><p>如果在动态方法解析阶段仍然没有找到 <code>IMP</code>，只能进入<strong>消息转发</strong>阶段。</p><p>进入消息转发阶段之前，imp变成<code>_objc_msgForward_impcache</code>，且最后再加入缓存中。</p><blockquote><p>关于动态方法解析和消息转发，会在后续再作详细分析</p></blockquote><p><strong>慢速查找流程图</strong></p><p><img src=https://w-md.imzsy.design/%E6%85%A2%E9%80%9F%E6%B6%88%E6%81%AF%E6%9F%A5%E6%89%BE-1989467.png alt=慢速消息查找></p><h3 id=总结><a href=#总结 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>总结</h3><p><strong>Runtime 中的优化</strong></p><ul><li><p>方法列表的缓存：</p><p>在消息发送过程中，查找阶段，会优先查找缓存。这个缓存会存储最近使用过的方法。原理是调用的方法有可能经常被调用。如果没有这个缓冲，直接去类的方法列表去查找，查询效率太低。</p><p>所以查找IMP会优先搜索方法缓存，如果没有找到，接着会在类的方法表中寻找IMP。</p><p>如果找到了，就会把这个IMP存储到缓存中备用。</p><p>基于这个设计，使Runtime系统能能够执行快速高效的方法查询操作。</p></li></ul></div></article><div class=post-tags><a href=../tags/ios/ rel=tag class=post-tags-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon tag-icon"><path d="M0 252.118V48C0 21.49 21.49.0 48 0h204.118a48 48 0 0133.941 14.059l211.882 211.882c18.745 18.745 18.745 49.137.0 67.882L293.823 497.941c-18.745 18.745-49.137 18.745-67.882.0L14.059 286.059A48 48 0 010 252.118zM112 64c-26.51.0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48z"/></svg>iOS</a></div></div></main><div id=back-to-top class=back-to-top><a href=#><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="icon arrow-up"><path d="M34.9 289.5l-22.2-22.2c-9.4-9.4-9.4-24.6.0-33.9L207 39c9.4-9.4 24.6-9.4 33.9.0l194.3 194.3c9.4 9.4 9.4 24.6.0 33.9L413 289.4c-9.5 9.5-25 9.3-34.3-.4L264 168.6V456c0 13.3-10.7 24-24 24h-32c-13.3.0-24-10.7-24-24V168.6L69.2 289.1c-9.3 9.8-24.8 10-34.3.4z"/></svg></a></div><footer id=footer class=footer><div class=footer-inner><div class=site-info>©&nbsp;2019–2021&nbsp;<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon footer-icon"><path d="M462.3 62.6C407.5 15.9 326 24.3 275.7 76.2L256 96.5l-19.7-20.3C186.1 24.3 104.5 15.9 49.7 62.6c-62.8 53.6-66.1 149.8-9.9 207.9l193.5 199.8c12.5 12.9 32.8 12.9 45.3.0l193.5-199.8c56.3-58.1 53-154.3-9.8-207.9z"/></svg>&nbsp;Dev - jw</div></div></footer></div><script>'serviceWorker'in navigator&&window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js')})</script><script>typeof MathJax=='undefined'?(window.MathJax={loader:{load:['[tex]/mhchem']},options:{renderActions:{addMenu:[0,'','']}},tex:{inlineMath:{'[+]':[['$','$']]},tags:'ams',packages:{'[+]':['mhchem']}}},function(){var a=document.createElement('script');a.src='https://cdn.jsdelivr.net/npm/mathjax@3.1.2/es5/tex-mml-chtml.js',a.defer=!0,document.head.appendChild(a)}()):(MathJax.texReset(),MathJax.typeset())</script><script src=https://cdn.jsdelivr.net/npm/mermaid@8.8.3/dist/mermaid.min.js></script><script>let mermaidConfig={startOnLoad:!0,flowchart:{useMaxWidth:!1,htmlLabels:!0},theme:'default'};mermaid.initialize(mermaidConfig)</script><script src=https://cdn.jsdelivr.net/npm/medium-zoom@latest/dist/medium-zoom.min.js></script><script>mediumZoom(document.querySelectorAll('div.post-body img'),{background:'hsla(var(--color-bg-h), var(--color-bg-s), var(--color-bg-l), 0.95)'})</script><script src=https://cdn.jsdelivr.net/npm/instant.page@5.1.0/instantpage.min.js type=module defer></script></body></html>

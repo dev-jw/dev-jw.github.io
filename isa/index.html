@@ -1,0 +1,269 @@
+<!doctype html><html lang=zh-cn><head prefix="og: http://ogp.me/ns# article: http://ogp.me/ns/article#"><meta charset=utf-8><meta name=generator content="Hugo 0.82.0"><meta name=theme-color content="#fff"><meta name=viewport content="width=device-width,initial-scale=1"><meta name=format-detection content="telephone=no, date=no, address=no, email=no"><meta http-equiv=cache-control content="no-transform"><meta http-equiv=cache-control content="no-siteapp"><title>iOS底层原理探索-isa结构&指向分析 | Dev - jw</title><link rel=stylesheet href=../css/meme.min.ae509b8259cb6c090411be6371211f6bb00631055ec9b68a994f27bb5f5f5f76.css><script src=../js/meme.min.3a56ecbb4ec7b23a805fc0116d4dac9095813dfd877cd8379675a8bdac538ffe.js></script><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400;1,700&family=Noto+Serif+SC:wght@400;500;700&family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap" media=print onload="this.media='all'"><noscript><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400;1,700&family=Noto+Serif+SC:wght@400;500;700&family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap"></noscript><meta name=author content="Dev - jw"><meta name=description content="在『iOS底层原理探索-alloc流程分析』中提了一下obj->initIns……"><link rel="shortcut icon" href=../favicon.ico type=image/x-icon><link rel=mask-icon href=../icons/safari-pinned-tab.svg color=#2a6df4><link rel=apple-touch-icon sizes=180x180 href=../icons/apple-touch-icon.png><meta name=apple-mobile-web-app-capable content="yes"><meta name=apple-mobile-web-app-title content="Dev - jw"><meta name=apple-mobile-web-app-status-bar-style content="black"><meta name=mobile-web-app-capable content="yes"><meta name=application-name content="Dev - jw"><meta name=msapplication-starturl content="../"><meta name=msapplication-TileColor content="#fff"><meta name=msapplication-TileImage content="../icons/mstile-150x150.png"><link rel=manifest href=../manifest.json><link rel=canonical href=https://dev.hjw.best/isa/><script type=application/ld+json>{"@context":"https://schema.org","@type":"WebPage","datePublished":"2020-09-10T10:25:02+08:00","dateModified":"2021-03-31T15:42:56+08:00","url":"https://dev.hjw.best/isa/","name":"iOS底层原理探索-isa结构\u0026指向分析","description":"在『iOS底层原理探索-alloc流程分析』中提了一下obj-\u003einitIns……","image":"https://dev.hjw.best/favicon.ico","license":"Copyright","publisher":{"@type":"Organization","name":"Dev - jw","logo":{"@type":"ImageObject","url":"https://dev.hjw.best/favicon.ico"},"url":"https://dev.hjw.best/"},"mainEntityOfPage":{"@type":"WebSite","@id":"https://dev.hjw.best/"}}</script><meta name=twitter:card content="summary"><meta property="og:title" content="iOS底层原理探索-isa结构&指向分析"><meta property="og:description" content="在『iOS底层原理探索-alloc流程分析』中提了一下obj->initIns……"><meta property="og:url" content="https://dev.hjw.best/isa/"><meta property="og:site_name" content="Dev - jw"><meta property="og:locale" content="zh"><meta property="og:image" content="https://dev.hjw.best/favicon.ico"><meta property="og:type" content="website"><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=Lato:wght@700&text=reuixiy&display=swap" media=print onload="this.media='all'"><noscript><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=Lato:wght@700&text=reuixiy&display=swap"></noscript><meta name=baidu-site-verification content="5nzYjT6RG7"></head><body><div class=container><header class=header><div class=header-wrapper><div class="header-inner single"><div class=site-brand><a href=../ class=brand>Dev - jw</a></div><nav class=nav><ul class=menu id=menu><li class=menu-item><a href=../about><span class=menu-item-name>关于</span></a></li><li class=menu-item><a id=theme-switcher href=#><span class="icon theme-icon-light">🌞</span><span class="icon theme-icon-dark">🌙</span></a></li></ul></nav></div></div><input type=checkbox id=nav-toggle aria-hidden=true>
+<label for=nav-toggle class=nav-toggle></label><label for=nav-toggle class=nav-curtain></label></header><main class="main single" id=main><div class=main-inner><article class="content post h-entry" data-align=default data-type=posts data-toc-num=true><h1 class="post-title p-name">iOS底层原理探索-isa结构&指向分析</h1><div class=post-meta><time datetime=2020-09-10T10:25:02+08:00 class="post-meta-item published dt-published"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="icon post-meta-icon"><path d="M148 288h-40c-6.6.0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v40c0 6.6-5.4 12-12 12zm108-12v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm96 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm-96 96v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm-96 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm192 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm96-260v352c0 26.5-21.5 48-48 48H48c-26.5.0-48-21.5-48-48V112c0-26.5 21.5-48 48-48h48V12c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v52h128V12c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v52h48c26.5.0 48 21.5 48 48zm-48 346V160H48v298c0 3.3 2.7 6 6 6h340c3.3.0 6-2.7 6-6z"/></svg>&nbsp;2020-09-10</time></div><div class="post-body e-content"><p>在『<a href=../alloc>iOS底层原理探索-alloc流程分析</a>』中提了一下<code>obj->initInstanceIsa(cls, hasCxxDtor)</code>，本文将对 isa 的进行细说</p><p>同样的，先提出几个问题：</p><ul><li>位域是什么？联合体是什么？联合体和结构体有什么区别</li><li>NSObject的本质是什么？</li><li>isa 是怎么存储类信息？</li><li>isa的走位和 superClass 的走向是怎么样的？</li><li>类在内存中存在多少份？</li></ul><h3 id=准备知识><a href=#准备知识 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>准备知识</h3><p>在分析 isa 之前，先补充位域和结构体的知识点</p><p><strong>位域</strong></p><p>位段，C语言允许在一个结构体中以位为单位来指定其成员所占内存长度，这种以位为单位的成员称为「位段」或称「位域」( bit field) 。利用位段能够用较少的位数存储数据</p><p>示例：</p><div class=highlight><pre class=chroma><code class=language-c++ data-lang=c++><span class=c1>// 使用位域声明
+</span><span class=c1></span><span class=k>struct</span> <span class=nc>Struct1</span> <span class=p>{</span>
+    <span class=kt>char</span> <span class=nl>ch</span><span class=p>:</span>   <span class=mi>1</span><span class=p>;</span>  <span class=c1>//1位
+</span><span class=c1></span>    <span class=kt>int</span>  <span class=nl>size</span><span class=p>:</span> <span class=mi>3</span><span class=p>;</span>  <span class=c1>//3位
+</span><span class=c1></span><span class=p>}</span> <span class=n>Struct1</span><span class=p>;</span>
+
+<span class=k>struct</span> <span class=nc>Struct2</span> <span class=p>{</span>
+    <span class=kt>char</span> <span class=n>ch</span><span class=p>;</span>    <span class=c1>//1位
+</span><span class=c1></span>    <span class=kt>int</span>  <span class=n>size</span><span class=p>;</span>  <span class=c1>//4位
+</span><span class=c1></span><span class=p>}</span> <span class=n>Struct2</span><span class=p>;</span>
+
+<span class=k>sizeof</span><span class=p>(</span><span class=n>Struct1</span><span class=p>);</span> <span class=c1>// 返回 4
+</span><span class=c1></span><span class=k>sizeof</span><span class=p>(</span><span class=n>Struct2</span><span class=p>);</span> <span class=c1>// 返回 8
+</span></code></pre></div><p><strong>联合体</strong></p><p>当多个数据需要共享内存或者多个数据每次只取其一时，可以利用<code>联合体(union)</code></p><ul><li>联合体是一个结构</li><li>它的所有成员相对于基地址的偏移量都为0</li><li>此结构空间要大到足够容纳最"宽"的成员</li><li>各变量是“互斥”的——共用一个内存首地址，联合变量可被赋予任一成员值,但每次只能赋一种值, 赋入新值则冲去旧值</li></ul><p><strong>与结构体比较</strong></p><p>结构体每个成员依次存储，联合体中所有成员的偏移地址都是 0，也就是说所有成员是叠在一起的，所以在联合体中某一时刻，只有一个成员有效——<strong>结构体内存大小取决于所有元素，联合体取决于最大那个</strong></p><p><img src=https://w-md.imzsy.design/image-20200911174308964.png alt=image-20200911174308964></p><h3 id=nsobject的本质><a href=#nsobject的本质 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>NSObject的本质</h3><p>源码分析均来自<a href=https://opensource.apple.com/source/objc4/ target=_blank rel=noopener>objc4-781</a>，且在 Objc2.0 之后</p><p><strong>NSObject的定义</strong></p><div class=highlight><pre class=chroma><code class=language-Objective-C data-lang=Objective-C><span class=k>typedef</span> <span class=k>struct</span> <span class=n>objc_class</span> <span class=o>*</span><span class=kt>Class</span><span class=p>;</span>
+<span class=k>typedef</span> <span class=k>struct</span> <span class=n>objc_object</span> <span class=o>*</span><span class=kt>id</span><span class=p>;</span>
+
+<span class=k>@interface</span> <span class=nc>NSObject</span> <span class=o>&lt;</span><span class=n>NSObject</span><span class=o>&gt;</span> <span class=p>{</span>
+    <span class=kt>Class</span> <span class=n>isa</span>  <span class=n>OBJC_ISA_AVAILABILITY</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div><p><code>objc_class</code>的定义</p><div class=highlight><pre class=chroma><code class=language-objc data-lang=objc><span class=k>struct</span> <span class=nl>objc_class</span> <span class=p>:</span> <span class=n>objc_object</span> <span class=p>{</span>
+    <span class=c1>// Class ISA;
+</span><span class=c1></span>    <span class=kt>Class</span> <span class=n>superclass</span><span class=p>;</span>
+    <span class=n>cache_t</span> <span class=n>cache</span><span class=p>;</span>             <span class=c1>// formerly cache pointer and vtable
+</span><span class=c1></span>    <span class=n>class_data_bits_t</span> <span class=n>bits</span><span class=p>;</span>    <span class=c1>// class_rw_t * plus custom rr/alloc flags
+</span><span class=c1></span>  	<span class=c1>// 去掉了部分的方法
+</span><span class=c1></span><span class=p>};</span>
+</code></pre></div><p><code>objc_object</code>的定义</p><div class=highlight><pre class=chroma><code class=language-objc data-lang=objc><span class=k>struct</span> <span class=n>objc_object</span> <span class=p>{</span>
+<span class=nl>private</span><span class=p>:</span>
+    <span class=n>isa_t</span> <span class=n>isa</span><span class=p>;</span>
+<span class=p>}</span>
+
+<span class=k>union</span> <span class=n>isa_t</span> <span class=p>{</span>
+    <span class=n>isa_t</span><span class=p>()</span> <span class=p>{</span> <span class=p>}</span>
+    <span class=n>isa_t</span><span class=p>(</span><span class=n>uintptr_t</span> <span class=n>value</span><span class=p>)</span> <span class=o>:</span> <span class=n>bits</span><span class=p>(</span><span class=n>value</span><span class=p>)</span> <span class=p>{</span> <span class=p>}</span>
+
+    <span class=kt>Class</span> <span class=n>cls</span><span class=p>;</span>
+    <span class=n>uintptr_t</span> <span class=n>bits</span><span class=p>;</span>
+<span class=cp>#if defined(ISA_BITFIELD)
+</span><span class=cp></span>    <span class=k>struct</span> <span class=p>{</span>
+        <span class=n>ISA_BITFIELD</span><span class=p>;</span>  <span class=c1>// defined in isa.h
+</span><span class=c1></span>    <span class=p>};</span>
+<span class=cp>#endif
+</span><span class=cp></span><span class=p>};</span>
+</code></pre></div><p>把源码的定义转化成类图，如下</p><p><img src=https://w-md.imzsy.design/isa%E5%AE%9A%E4%B9%89.png alt=isa定义></p><p>从上述源码中，可以看到，<strong>Objective-C 对象都是 C 语言结构体实现的</strong>，在 objc2.0 中，所有的对象都会包含一个 <code>isa_t</code> 类型的结构体。</p><ul><li><code>objc_object</code>被<code>typedef</code>成了<code>id</code>类型，也就是我们平时遇到的<code>id</code>类型。这个结构体就只包含了一个<code>isa_t</code>类型的结构体</li><li><code>objc_class</code>继承于<code>objc_object</code>。所以在 objc_class 中也会包含 <code>isa_t</code> 类型的结构体 isa</li></ul><p>至此，可以得出结论：<strong>Objective-C中类也是一个对象</strong></p><p><strong>类的本质是 objc_class 类型的结构体，objc_class 继承与 objc_object</strong></p><p>那么 isa 到底是什么呢？</p><h3 id=isa结构分析><a href=#isa结构分析 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>isa结构分析</h3><p><strong><code>isa</code>的初始化</strong></p><p>那就要从<code>obj->initInstanceIsa(cls, hasCxxDtor)</code>之后的流程，继续探索</p><div class=highlight><pre class=chroma><code class=language-Objective-C data-lang=Objective-C><span class=kr>inline</span> <span class=kt>void</span> 
+<span class=n>objc_object</span><span class=o>::</span><span class=n>initInstanceIsa</span><span class=p>(</span><span class=kt>Class</span> <span class=n>cls</span><span class=p>,</span> <span class=kt>bool</span> <span class=n>hasCxxDtor</span><span class=p>)</span>
+<span class=p>{</span>
+    <span class=n>ASSERT</span><span class=p>(</span><span class=o>!</span><span class=n>cls</span><span class=o>-&gt;</span><span class=n>instancesRequireRawIsa</span><span class=p>());</span>
+    <span class=n>ASSERT</span><span class=p>(</span><span class=n>hasCxxDtor</span> <span class=o>==</span> <span class=n>cls</span><span class=o>-&gt;</span><span class=n>hasCxxDtor</span><span class=p>());</span>
+
+    <span class=n>initIsa</span><span class=p>(</span><span class=n>cls</span><span class=p>,</span> <span class=nb>true</span><span class=p>,</span> <span class=n>hasCxxDtor</span><span class=p>);</span>
+<span class=p>}</span>
+
+<span class=kr>inline</span> <span class=kt>void</span> 
+<span class=n>objc_object</span><span class=o>::</span><span class=n>initIsa</span><span class=p>(</span><span class=kt>Class</span> <span class=n>cls</span><span class=p>,</span> <span class=kt>bool</span> <span class=n>nonpointer</span><span class=p>,</span> <span class=kt>bool</span> <span class=n>hasCxxDtor</span><span class=p>)</span> 
+<span class=p>{</span> 
+    <span class=n>ASSERT</span><span class=p>(</span><span class=o>!</span><span class=n>isTaggedPointer</span><span class=p>());</span> 
+    
+    <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=n>nonpointer</span><span class=p>)</span> <span class=p>{</span>
+        <span class=n>isa</span> <span class=o>=</span> <span class=n>isa_t</span><span class=p>((</span><span class=n>uintptr_t</span><span class=p>)</span><span class=n>cls</span><span class=p>);</span>
+    <span class=p>}</span> <span class=k>else</span> <span class=p>{</span>
+        <span class=n>ASSERT</span><span class=p>(</span><span class=o>!</span><span class=n>DisableNonpointerIsa</span><span class=p>);</span>
+        <span class=n>ASSERT</span><span class=p>(</span><span class=o>!</span><span class=n>cls</span><span class=o>-&gt;</span><span class=n>instancesRequireRawIsa</span><span class=p>());</span>
+
+        <span class=n>isa_t</span> <span class=nf>newisa</span><span class=p>(</span><span class=mi>0</span><span class=p>);</span>
+
+<span class=cp>#if SUPPORT_INDEXED_ISA
+</span><span class=cp></span>        <span class=n>ASSERT</span><span class=p>(</span><span class=n>cls</span><span class=o>-&gt;</span><span class=n>classArrayIndex</span><span class=p>()</span> <span class=o>&gt;</span> <span class=mi>0</span><span class=p>);</span>
+        <span class=n>newisa</span><span class=p>.</span><span class=n>bits</span> <span class=o>=</span> <span class=n>ISA_INDEX_MAGIC_VALUE</span><span class=p>;</span>
+        <span class=c1>// isa.magic is part of ISA_MAGIC_VALUE
+</span><span class=c1></span>        <span class=c1>// isa.nonpointer is part of ISA_MAGIC_VALUE
+</span><span class=c1></span>        <span class=n>newisa</span><span class=p>.</span><span class=n>has_cxx_dtor</span> <span class=o>=</span> <span class=n>hasCxxDtor</span><span class=p>;</span>
+        <span class=n>newisa</span><span class=p>.</span><span class=n>indexcls</span> <span class=o>=</span> <span class=p>(</span><span class=n>uintptr_t</span><span class=p>)</span><span class=n>cls</span><span class=o>-&gt;</span><span class=n>classArrayIndex</span><span class=p>();</span>
+<span class=cp>#else
+</span><span class=cp></span>        <span class=n>newisa</span><span class=p>.</span><span class=n>bits</span> <span class=o>=</span> <span class=n>ISA_MAGIC_VALUE</span><span class=p>;</span>
+        <span class=c1>// isa.magic is part of ISA_MAGIC_VALUE
+</span><span class=c1></span>        <span class=c1>// isa.nonpointer is part of ISA_MAGIC_VALUE
+</span><span class=c1></span>        <span class=n>newisa</span><span class=p>.</span><span class=n>has_cxx_dtor</span> <span class=o>=</span> <span class=n>hasCxxDtor</span><span class=p>;</span>
+        <span class=n>newisa</span><span class=p>.</span><span class=n>shiftcls</span> <span class=o>=</span> <span class=p>(</span><span class=n>uintptr_t</span><span class=p>)</span><span class=n>cls</span> <span class=o>&gt;&gt;</span> <span class=mi>3</span><span class=p>;</span>
+<span class=cp>#endif
+</span><span class=cp></span>
+        <span class=c1>// This write must be performed in a single store in some cases
+</span><span class=c1></span>        <span class=c1>// (for example when realizing a class because other threads
+</span><span class=c1></span>        <span class=c1>// may simultaneously try to use the class).
+</span><span class=c1></span>        <span class=c1>// fixme use atomics here to guarantee single-store and to
+</span><span class=c1></span>        <span class=c1>// guarantee memory order w.r.t. the class index table
+</span><span class=c1></span>        <span class=c1>// ...but not too atomic because we don&#39;t want to hurt instantiation
+</span><span class=c1></span>        <span class=n>isa</span> <span class=o>=</span> <span class=n>newisa</span><span class=p>;</span>
+    <span class=p>}</span>
+<span class=p>}</span>
+</code></pre></div><p>传入的 <code>nonpointer</code> 是 ture，那么会执行 else 中的语句：分别对<code>bits、has_cxx_dtor、shiftcls</code>赋值。</p><p><strong><code>isa_t</code> 的具体实现</strong></p><div class=highlight><pre class=chroma><code class=language-objc data-lang=objc><span class=k>union</span> <span class=n>isa_t</span> <span class=p>{</span>
+    <span class=n>isa_t</span><span class=p>()</span> <span class=p>{</span> <span class=p>}</span>
+    <span class=n>isa_t</span><span class=p>(</span><span class=n>uintptr_t</span> <span class=n>value</span><span class=p>)</span> <span class=o>:</span> <span class=n>bits</span><span class=p>(</span><span class=n>value</span><span class=p>)</span> <span class=p>{</span> <span class=p>}</span>
+
+    <span class=kt>Class</span> <span class=n>cls</span><span class=p>;</span>
+    <span class=n>uintptr_t</span> <span class=n>bits</span><span class=p>;</span>
+<span class=cp>#if defined(ISA_BITFIELD)
+</span><span class=cp></span>    <span class=k>struct</span> <span class=p>{</span>
+        <span class=n>ISA_BITFIELD</span><span class=p>;</span>  <span class=c1>// defined in isa.h
+</span><span class=c1></span>    <span class=p>};</span>
+<span class=cp>#endif
+</span><span class=cp></span><span class=p>};</span>
+</code></pre></div><p>首先，这是个<strong>联合体</strong>，内部有两个成员，<code>cls</code> 和 <code>bits</code>，也就是说在初始化 isa 指针时，会有 2 种情况</p><ul><li>通过 <code>cls</code> 初始化，<code>bits 无默认值</code></li><li>通过 <code>bits</code> 初始化，<code>cls 有默认值</code></li></ul><p><code>ISA_BITFIELD</code>是一个位域类型的结构体，用于存储类信息以及其他信息，宏定义为</p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=cp># if __arm64__
+</span><span class=cp>#   define ISA_MASK        0x0000000ffffffff8ULL
+</span><span class=cp>#   define ISA_MAGIC_MASK  0x000003f000000001ULL
+</span><span class=cp>#   define ISA_MAGIC_VALUE 0x000001a000000001ULL
+</span><span class=cp>#   define ISA_BITFIELD                                                      \
+</span><span class=cp>      uintptr_t nonpointer        : 1;                                       \
+</span><span class=cp>      uintptr_t has_assoc         : 1;                                       \
+</span><span class=cp>      uintptr_t has_cxx_dtor      : 1;                                       \
+</span><span class=cp>      uintptr_t shiftcls          : 33; </span><span class=cm>/*MACH_VM_MAX_ADDRESS 0x1000000000*/</span><span class=cp> \
+</span><span class=cp>      uintptr_t magic             : 6;                                       \
+</span><span class=cp>      uintptr_t weakly_referenced : 1;                                       \
+</span><span class=cp>      uintptr_t deallocating      : 1;                                       \
+</span><span class=cp>      uintptr_t has_sidetable_rc  : 1;                                       \
+</span><span class=cp>      uintptr_t extra_rc          : 19
+</span><span class=cp>#   define RC_ONE   (1ULL&lt;&lt;45)
+</span><span class=cp>#   define RC_HALF  (1ULL&lt;&lt;18)
+</span><span class=cp></span>
+<span class=cp># elif __x86_64__
+</span><span class=cp>#   define ISA_MASK        0x00007ffffffffff8ULL
+</span><span class=cp>#   define ISA_MAGIC_MASK  0x001f800000000001ULL
+</span><span class=cp>#   define ISA_MAGIC_VALUE 0x001d800000000001ULL
+</span><span class=cp>#   define ISA_BITFIELD                                                        \
+</span><span class=cp>      uintptr_t nonpointer        : 1;                                         \
+</span><span class=cp>      uintptr_t has_assoc         : 1;                                         \
+</span><span class=cp>      uintptr_t has_cxx_dtor      : 1;                                         \
+</span><span class=cp>      uintptr_t shiftcls          : 44; </span><span class=cm>/*MACH_VM_MAX_ADDRESS 0x7fffffe00000*/</span><span class=cp> \
+</span><span class=cp>      uintptr_t magic             : 6;                                         \
+</span><span class=cp>      uintptr_t weakly_referenced : 1;                                         \
+</span><span class=cp>      uintptr_t deallocating      : 1;                                         \
+</span><span class=cp>      uintptr_t has_sidetable_rc  : 1;                                         \
+</span><span class=cp>      uintptr_t extra_rc          : 8
+</span><span class=cp>#   define RC_ONE   (1ULL&lt;&lt;56)
+</span><span class=cp>#   define RC_HALF  (1ULL&lt;&lt;7)
+</span><span class=cp></span>
+<span class=cp># else
+</span><span class=cp>#   error unknown architecture for packed isa
+</span><span class=cp># endif
+</span></code></pre></div><p><img src=https://w-md.imzsy.design/2.png alt=2></p><div class=table-container><table><thead><tr><th>变量名</th><th>描述</th></tr></thead><tbody><tr><td><code>nonpointer</code></td><td>表示是否对isa指针开启<code>指针优化</code>——0：纯isa指针；1：不止是类对象地址，isa 中包含了类信息、对象的引用计数等</td></tr><tr><td><code>has_assoc</code></td><td><code>关联对象</code>标志位</td></tr><tr><td><code>has_cxx_dtor</code></td><td>该对象是否有 C++ 或者 Objc 的析构器，如果有析构函数,则需要做析构逻辑；如果没有，则可以更快的释放对象</td></tr><tr><td><code>shiftcls</code></td><td><strong>存储类指针的值，即类信息</strong>，在开启指针优化的情况下，在 arm64 架构中有 33 位用来存储类指针</td></tr><tr><td><code>magic</code></td><td>用于调试器判断当前对象是<code>真的对象</code>还是<code>没有初始化的空间</code></td></tr><tr><td><code>weakly_referenced</code></td><td>对象<code>是否被指向</code>或者<code>曾经指向一个 ARC</code> 的弱变量， 没有弱引用的对象可以更快释放</td></tr><tr><td><code>deallocating</code></td><td>标志对象是否<code>正在释放</code>内存</td></tr><tr><td><code>has_sidetable_rc</code></td><td>当对象<code>引用技术大于 10</code> 时，则需要借用该变量存储进位</td></tr><tr><td><code>extra_rc</code></td><td>表示该对象的引用计数值，实际上是引用计数值减 1。 例如，如果对象的引用计数为 10，那么 extra_rc 为 9</td></tr></tbody></table></div><p><strong>shiftcls关联类</strong></p><p>shiftcls是存储类的指针，而<code>newisa.shiftcls = (uintptr_t)cls >> 3</code>这行代码，正是将 <code>isa</code> 与当前类 <code>cls</code> 关联起来。</p><p><code>newisa.shiftcls = (uintptr_t)cls >> 3</code>这行代码是将 <code>isa</code> 与当前类 <code>cls</code> 关联起来，即将类信息存储到 isa 指针当中。</p><blockquote><p>将当前地址右移三位的主要原因是：</p><p>将 Class 指针中无用的后三位清除减小内存的消耗，因为类的指针要按照字节（8 bits）对齐内存，其指针后三位都是没有意义的 0。</p><p>具体可以看『<a href=https://github.com/draveness/analyze/blob/master/contents/objc/%E4%BB%8E%20NSObject%20%E7%9A%84%E5%88%9D%E5%A7%8B%E5%8C%96%E4%BA%86%E8%A7%A3%20isa.md#shiftcls target=_blank rel=noopener>从 NSObject 的初始化了解 isa</a>』中的shiftcls分析。</p></blockquote><p><strong>验证对象的首地址为 isa</strong></p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=kt>Class</span> <span class=nf>object_getClass</span><span class=p>(</span><span class=kt>id</span> <span class=n>obj</span><span class=p>)</span>
+<span class=p>{</span>
+    <span class=k>if</span> <span class=p>(</span><span class=n>obj</span><span class=p>)</span> <span class=k>return</span> <span class=n>obj</span><span class=o>-&gt;</span><span class=n>getIsa</span><span class=p>();</span>
+    <span class=k>else</span> <span class=k>return</span> <span class=n>Nil</span><span class=p>;</span>
+<span class=p>}</span>
+
+<span class=kr>inline</span> <span class=kt>Class</span> 
+<span class=n>objc_object</span><span class=o>::</span><span class=n>getIsa</span><span class=p>()</span> 
+<span class=p>{</span>
+    <span class=k>return</span> <span class=n>ISA</span><span class=p>();</span>
+<span class=p>}</span>
+
+<span class=kr>inline</span> <span class=kt>Class</span> 
+<span class=n>objc_object</span><span class=o>::</span><span class=n>ISA</span><span class=p>()</span> 
+<span class=p>{</span>
+    <span class=n>ASSERT</span><span class=p>(</span><span class=o>!</span><span class=n>isTaggedPointer</span><span class=p>());</span> 
+<span class=cp>#if SUPPORT_INDEXED_ISA
+</span><span class=cp></span>    <span class=k>if</span> <span class=p>(</span><span class=n>isa</span><span class=p>.</span><span class=n>nonpointer</span><span class=p>)</span> <span class=p>{</span>
+        <span class=n>uintptr_t</span> <span class=n>slot</span> <span class=o>=</span> <span class=n>isa</span><span class=p>.</span><span class=n>indexcls</span><span class=p>;</span>
+        <span class=k>return</span> <span class=nf>classForIndex</span><span class=p>((</span><span class=kt>unsigned</span><span class=p>)</span><span class=n>slot</span><span class=p>);</span>
+    <span class=p>}</span>
+    <span class=k>return</span> <span class=p>(</span><span class=kt>Class</span><span class=p>)</span><span class=n>isa</span><span class=p>.</span><span class=n>bits</span><span class=p>;</span>
+<span class=cp>#else
+</span><span class=cp></span>    <span class=k>return</span> <span class=p>(</span><span class=kt>Class</span><span class=p>)(</span><span class=n>isa</span><span class=p>.</span><span class=n>bits</span> <span class=o>&amp;</span> <span class=n>ISA_MASK</span><span class=p>);</span>
+<span class=cp>#endif
+</span><span class=cp></span><span class=p>}</span>
+</code></pre></div><p>通过<code>object_getClass</code>方法流程，以及断点追踪，如下：</p><div class=highlight><pre class=chroma><code class=language-ruby data-lang=ruby><span class=sr>//</span> <span class=err>打印创建的</span> <span class=n>isa</span>
+<span class=p>(</span><span class=n>lldb</span><span class=p>)</span><span class=nb>p</span> <span class=n>newisa</span>
+<span class=p>(</span><span class=n>isa_t</span><span class=p>)</span> <span class=vg>$4</span> <span class=o>=</span> <span class=p>{</span>
+  <span class=n>cls</span> <span class=o>=</span> <span class=no>Person</span>
+  <span class=n>bits</span> <span class=o>=</span> <span class=mi>8303516107940105</span>
+   <span class=o>=</span> <span class=p>{</span>
+    <span class=n>nonpointer</span> <span class=o>=</span> <span class=mi>1</span>
+    <span class=n>has_assoc</span> <span class=o>=</span> <span class=mi>0</span>
+    <span class=n>has_cxx_dtor</span> <span class=o>=</span> <span class=mi>0</span>
+    <span class=n>shiftcls</span> <span class=o>=</span> <span class=mi>536871969</span>
+    <span class=n>magic</span> <span class=o>=</span> <span class=mi>59</span>
+    <span class=n>weakly_referenced</span> <span class=o>=</span> <span class=mi>0</span>
+    <span class=n>deallocating</span> <span class=o>=</span> <span class=mi>0</span>
+    <span class=n>has_sidetable_rc</span> <span class=o>=</span> <span class=mi>0</span>
+    <span class=n>extra_rc</span> <span class=o>=</span> <span class=mi>0</span>
+  <span class=p>}</span>
+<span class=p>}</span>
+
+<span class=sr>//</span> <span class=err>根据</span><span class=sb>`object_getClass`</span><span class=err>实现原理</span>
+<span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span><span class=o>/</span><span class=n>x</span> <span class=mi>8303516107940105</span> <span class=o>&amp;</span> <span class=mh>0x00007ffffffffff8</span><span class=no>ULL</span>
+<span class=p>(</span><span class=n>unsigned</span> <span class=n>long</span> <span class=n>long</span><span class=p>)</span> <span class=vg>$21</span> <span class=o>=</span> <span class=mh>0x0000000100002108</span>
+
+<span class=o>//</span> <span class=err>打印</span> <span class=n>person</span> <span class=err>实例对象的首地址</span>
+<span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=n>x</span><span class=o>/</span><span class=mi>4</span><span class=n>gx</span> <span class=n>person</span>
+<span class=mh>0x100726c80</span><span class=p>:</span> <span class=mh>0x001d800100002109</span> <span class=mh>0x0000000000000000</span>
+<span class=mh>0x100726c90</span><span class=p>:</span> <span class=mh>0x70736e494b575b2d</span> <span class=mh>0x574b57726f746365</span>
+
+<span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span><span class=o>/</span><span class=n>x</span> <span class=mh>0x001d800100002109</span> <span class=o>&amp;</span> <span class=mh>0x00007ffffffffff8</span><span class=no>ULL</span>
+<span class=p>(</span><span class=n>unsigned</span> <span class=n>long</span> <span class=n>long</span><span class=p>)</span> <span class=vg>$22</span> <span class=o>=</span> <span class=mh>0x0000000100002108</span>
+
+<span class=o>//</span> <span class=err>打印类信息</span>
+<span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span><span class=o>/</span><span class=n>x</span> <span class=no>Person</span><span class=o>.</span><span class=n>class</span>
+<span class=p>(</span><span class=no>Class</span><span class=p>)</span> <span class=vg>$23</span> <span class=o>=</span> <span class=mh>0x0000000100002108</span> <span class=no>Person</span>
+
+<span class=sr>//</span> <span class=vg>$21</span><span class=err>、</span><span class=vg>$22</span><span class=err>、</span><span class=vg>$23</span> <span class=err>是相同的地址</span>
+</code></pre></div><p>我们可以得出：<strong>实例对象的首地址一定是 <code>isa</code>，并且<code>shiftcls</code>是存储类的指针</strong></p><h3 id=isa走位><a href=#isa走位 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>isa走位</h3><p>我们已经知道，类和实例对象中都包含了一个 objc_class类型的 isa，并且首地址一定是 isa。</p><p>当对象的<strong>实例方法</strong>被调用的时候，会通过 isa 找到相应的类，再去查找方法。</p><p>那调用<strong>类方法</strong>的时候，类的 isa 又是怎么操作的呢？</p><p>其实，苹果在这里为了和对象查找方法的机制一致，于是引入了<code>元类(meta-class)</code>的概念</p><blockquote><p>关于元类，更多具体可以研究这篇文章<a href=http://www.cocoawithlove.com/2010/01/what-is-meta-class-in-objective-c.html target=_blank rel=noopener>What is a meta-class in Objective-C?</a></p></blockquote><p>在引入元类之后，类对象和对象查找方法的机制就完全统一了</p><ul><li>对象的实例方法调用时，通过对象的 isa 在类中获取方法的实现</li><li>类对象的类方法调用时，通过类的 isa 在元类中获取方法的实现</li></ul><p><strong>打印类/对象查看isa走向</strong></p><p><img src=https://w-md.imzsy.design/image-20200914134107532.png alt=image-20200914134107532></p><ol><li>打印 Person 类，取得 isa</li><li>Person 类的 isa 进行偏移得到 Person 元类，打印 Person 元类取得 isa</li><li>Person 元类的 isa 进行偏移得到 NSObject 根元类，打印 NSObject 根元类取得 isa</li><li>NSObject 根元类的 isa 进行偏移得到 NSObject 根元类本身</li><li>打印 NSObject 根类，取得 isa</li><li>NSObject 根类的 isa 进行偏移得到 NSObject 根元类</li></ol><p><strong>isa走向结论：</strong></p><ul><li><code>实例对象 -> 类对象 -> 元类 -> 根元类 -> 根元类(本身)</code></li><li><code>NSObject(根类) -> 根元类 -> 根元类(本身)</code></li></ul><p>对象、类、元类之间的关系，如下图：</p><p><img src=https://w-md.imzsy.design/isa%E6%B5%81%E7%A8%8B%E5%9B%BE.png alt=isa流程图></p><p>图中实线是 super_class指针，虚线是isa指针</p><ul><li>Root class(class)其实就是 NSObject，NSObject是没有超类的，所以Root class(class)的superclass指向nil</li><li>每个Class都有一个isa指针指向唯一的Meta class</li><li>Root class(meta)的superclass指向Root class(class)，也就是NSObject，形成一个回路</li><li>每个Meta class的isa指针都指向Root class (meta)</li></ul><p>那么，类在内存中是不是会存在很多份呢？</p><p><strong>类在内存中只会存在一份</strong></p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=kt>void</span> <span class=nf>validClass</span><span class=p>()</span> <span class=p>{</span>
+    <span class=kt>Class</span> <span class=n>class1</span> <span class=o>=</span> <span class=p>[</span><span class=n>Person</span> <span class=k>class</span><span class=p>];</span>
+    <span class=kt>Class</span> <span class=n>class2</span> <span class=o>=</span> <span class=p>[</span><span class=n>Person</span> <span class=n>alloc</span><span class=p>].</span><span class=k>class</span><span class=p>;</span>
+    <span class=kt>Class</span> <span class=n>class3</span> <span class=o>=</span> <span class=n>object_getClass</span><span class=p>([</span><span class=n>Person</span> <span class=n>alloc</span><span class=p>]);</span>
+    <span class=n>NSLog</span><span class=p>(</span><span class=s>@&#34;</span><span class=se>\n</span><span class=s>%p</span><span class=se>\n</span><span class=s>%p</span><span class=se>\n</span><span class=s>%p</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>,</span><span class=n>class1</span><span class=p>,</span><span class=n>class2</span><span class=p>,</span><span class=n>class3</span><span class=p>);</span>
+<span class=p>}</span>
+<span class=kt>int</span> <span class=nf>main</span><span class=p>(</span><span class=kt>int</span> <span class=n>argc</span><span class=p>,</span> <span class=k>const</span> <span class=kt>char</span> <span class=o>*</span> <span class=n>argv</span><span class=p>[])</span> <span class=p>{</span>
+    <span class=k>@autoreleasepool</span> <span class=p>{</span>
+        <span class=c1>// insert code here...
+</span><span class=c1></span>        <span class=n>validClass</span><span class=p>();</span>
+    <span class=p>}</span>
+    <span class=k>return</span> <span class=mi>0</span><span class=p>;</span>
+<span class=p>}</span>
+<span class=c1>// 输出
+</span><span class=c1></span><span class=mh>0x100002110</span>
+<span class=mh>0x100002110</span>
+<span class=mh>0x100002110</span>
+</code></pre></div><p>输出证明<code>类在内存中只会存在一个，而实例对象可以存在多个</code></p><h3 id=测试><a href=#测试 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>测试</h3><p>下面代码输出是什么？</p><p><strong>代码一</strong></p><div class=highlight><pre class=chroma><code class=language-objc data-lang=objc><span class=k>@interface</span> <span class=nc>Cat</span> : <span class=nc>Animal</span>
+<span class=k>@end</span>
+
+<span class=k>@implementation</span> <span class=nc>Cat</span>
+<span class=p>-</span> <span class=p>(</span><span class=kt>id</span><span class=p>)</span><span class=nf>init</span>
+<span class=p>{</span>
+    <span class=nb>self</span> <span class=o>=</span> <span class=p>[</span><span class=nb>super</span> <span class=n>init</span><span class=p>];</span>
+    <span class=k>if</span> <span class=p>(</span><span class=nb>self</span><span class=p>)</span>
+    <span class=p>{</span>
+        <span class=n>NSLog</span><span class=p>(</span><span class=s>@&#34;%@&#34;</span><span class=p>,</span> <span class=n>NSStringFromClass</span><span class=p>([</span><span class=nb>self</span> <span class=k>class</span><span class=p>]));</span>
+        <span class=n>NSLog</span><span class=p>(</span><span class=s>@&#34;%@&#34;</span><span class=p>,</span> <span class=n>NSStringFromClass</span><span class=p>([</span><span class=nb>super</span> <span class=k>class</span><span class=p>]));</span>
+    <span class=p>}</span>
+<span class=k>return</span> <span class=nb>self</span><span class=p>;</span>
+<span class=p>}</span>
+<span class=k>@end</span>
+</code></pre></div><p><strong>代码二</strong></p><div class=highlight><pre class=chroma><code class=language-objc data-lang=objc><span class=k>@interface</span> <span class=nc>Person</span> : <span class=nc>NSObject</span>
+<span class=k>@end</span>
+
+<span class=k>@implementation</span> <span class=nc>Person</span>
+<span class=k>@end</span>
+
+<span class=kt>int</span> <span class=n>main</span><span class=p>(</span><span class=kt>int</span> <span class=n>argc</span><span class=p>,</span> <span class=k>const</span> <span class=kt>char</span> <span class=o>*</span> <span class=n>argv</span><span class=p>[])</span> <span class=p>{</span>
+  <span class=k>@autoreleasepool</span> <span class=p>{</span>
+      <span class=kt>BOOL</span> <span class=n>res1</span> <span class=o>=</span> <span class=p>[(</span><span class=kt>id</span><span class=p>)[</span><span class=n>NSObject</span> <span class=k>class</span><span class=p>]</span> <span class=nl>isKindOfClass</span><span class=p>:[</span><span class=n>NSObject</span> <span class=k>class</span><span class=p>]];</span>
+      <span class=kt>BOOL</span> <span class=n>res2</span> <span class=o>=</span> <span class=p>[(</span><span class=kt>id</span><span class=p>)[</span><span class=n>NSObject</span> <span class=k>class</span><span class=p>]</span> <span class=nl>isMemberOfClass</span><span class=p>:[</span><span class=n>NSObject</span> <span class=k>class</span><span class=p>]];</span>
+      <span class=kt>BOOL</span> <span class=n>res3</span> <span class=o>=</span> <span class=p>[(</span><span class=kt>id</span><span class=p>)[</span><span class=n>Person</span> <span class=k>class</span><span class=p>]</span> <span class=nl>isKindOfClass</span><span class=p>:[</span><span class=n>Person</span> <span class=k>class</span><span class=p>]];</span>
+      <span class=kt>BOOL</span> <span class=n>res4</span> <span class=o>=</span> <span class=p>[(</span><span class=kt>id</span><span class=p>)[</span><span class=n>Person</span> <span class=k>class</span><span class=p>]</span> <span class=nl>isMemberOfClass</span><span class=p>:[</span><span class=n>Person</span> <span class=k>class</span><span class=p>]];</span>
+
+      <span class=n>NSLog</span><span class=p>(</span><span class=s>@&#34;%d %d %d %d&#34;</span><span class=p>,</span> <span class=n>res1</span><span class=p>,</span> <span class=n>res2</span><span class=p>,</span> <span class=n>res3</span><span class=p>,</span> <span class=n>res4</span><span class=p>);</span>
+  <span class=p>}</span>
+  <span class=k>return</span> <span class=mi>0</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div><p><strong>代码三</strong></p><div class=highlight><pre class=chroma><code class=language-objc data-lang=objc><span class=k>@interface</span> <span class=nc>Person</span> : <span class=nc>NSObject</span>
+<span class=k>@property</span> <span class=p>(</span><span class=k>nonatomic</span><span class=p>,</span> <span class=k>copy</span><span class=p>)</span> <span class=n>NSString</span> <span class=o>*</span><span class=n>name</span><span class=p>;</span>
+<span class=p>-</span> <span class=p>(</span><span class=kt>void</span><span class=p>)</span><span class=nf>speak</span><span class=p>;</span>
+<span class=k>@end</span>
+<span class=k>@implementation</span> <span class=nc>Sark</span>
+<span class=p>-</span> <span class=p>(</span><span class=kt>void</span><span class=p>)</span><span class=nf>speak</span> <span class=p>{</span>                            
+   <span class=n>NSLog</span><span class=p>(</span><span class=s>@&#34;my name&#39;s %@&#34;</span><span class=p>,</span> <span class=nb>self</span><span class=p>.</span><span class=n>name</span><span class=p>);</span>
+<span class=p>}</span>
+<span class=k>@end</span>
+  
+<span class=k>@implementation</span> <span class=nc>ViewController</span>
+<span class=p>-</span> <span class=p>(</span><span class=kt>void</span><span class=p>)</span><span class=nf>viewDidLoad</span> <span class=p>{</span>  
+   <span class=p>[</span><span class=nb>super</span> <span class=n>viewDidLoad</span><span class=p>];</span>
+  
+   <span class=kt>id</span> <span class=n>cls</span> <span class=o>=</span> <span class=p>[</span><span class=n>Sark</span> <span class=k>class</span><span class=p>];</span>
+   <span class=kt>void</span> <span class=o>*</span><span class=n>obj</span> <span class=o>=</span> <span class=o>&amp;</span><span class=n>cls</span><span class=p>;</span>
+   <span class=p>[(</span><span class=k>__bridge</span> <span class=kt>id</span><span class=p>)</span><span class=n>obj</span> <span class=n>speak</span><span class=p>];</span>
+<span class=p>}</span>
+<span class=k>@end</span>
+</code></pre></div><p>题目分析：<a href=../isa-question-analysis>iOS底层原理探索-isa自测题分析</a></p><blockquote><p>参考文章：</p><p><a href=https://halfrost.com/objc_runtime_isa_class/ target=_blank rel=noopener>神经病院Objective-C Runtime 入院第一天—— isa 和Class</a></p></blockquote></div></article><div class=post-tags><a href=../tags/ios/ rel=tag class=post-tags-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon tag-icon"><path d="M0 252.118V48C0 21.49 21.49.0 48 0h204.118a48 48 0 0133.941 14.059l211.882 211.882c18.745 18.745 18.745 49.137.0 67.882L293.823 497.941c-18.745 18.745-49.137 18.745-67.882.0L14.059 286.059A48 48 0 010 252.118zM112 64c-26.51.0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48z"/></svg>iOS</a></div></div></main><div id=back-to-top class=back-to-top><a href=#><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="icon arrow-up"><path d="M34.9 289.5l-22.2-22.2c-9.4-9.4-9.4-24.6.0-33.9L207 39c9.4-9.4 24.6-9.4 33.9.0l194.3 194.3c9.4 9.4 9.4 24.6.0 33.9L413 289.4c-9.5 9.5-25 9.3-34.3-.4L264 168.6V456c0 13.3-10.7 24-24 24h-32c-13.3.0-24-10.7-24-24V168.6L69.2 289.1c-9.3 9.8-24.8 10-34.3.4z"/></svg></a></div><footer id=footer class=footer><div class=footer-inner><div class=site-info>©&nbsp;2019–2021&nbsp;<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon footer-icon"><path d="M462.3 62.6C407.5 15.9 326 24.3 275.7 76.2L256 96.5l-19.7-20.3C186.1 24.3 104.5 15.9 49.7 62.6c-62.8 53.6-66.1 149.8-9.9 207.9l193.5 199.8c12.5 12.9 32.8 12.9 45.3.0l193.5-199.8c56.3-58.1 53-154.3-9.8-207.9z"/></svg>&nbsp;Dev - jw</div></div></footer></div><script>'serviceWorker'in navigator&&window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js')})</script><script>typeof MathJax=='undefined'?(window.MathJax={loader:{load:['[tex]/mhchem']},options:{renderActions:{addMenu:[0,'','']}},tex:{inlineMath:{'[+]':[['$','$']]},tags:'ams',packages:{'[+]':['mhchem']}}},function(){var a=document.createElement('script');a.src='https://cdn.jsdelivr.net/npm/mathjax@3.1.2/es5/tex-mml-chtml.js',a.defer=!0,document.head.appendChild(a)}()):(MathJax.texReset(),MathJax.typeset())</script><script src=https://cdn.jsdelivr.net/npm/mermaid@8.8.3/dist/mermaid.min.js></script><script>let mermaidConfig={startOnLoad:!0,flowchart:{useMaxWidth:!1,htmlLabels:!0},theme:'default'};mermaid.initialize(mermaidConfig)</script><script src=https://cdn.jsdelivr.net/npm/medium-zoom@latest/dist/medium-zoom.min.js></script><script>mediumZoom(document.querySelectorAll('div.post-body img'),{background:'hsla(var(--color-bg-h), var(--color-bg-s), var(--color-bg-l), 0.95)'})</script><script src=https://cdn.jsdelivr.net/npm/instant.page@5.1.0/instantpage.min.js type=module defer></script></body></html>

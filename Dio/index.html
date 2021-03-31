@@ -1,0 +1,392 @@
+<!doctype html><html lang=zh-cn><head prefix="og: http://ogp.me/ns# article: http://ogp.me/ns/article#"><meta charset=utf-8><meta name=generator content="Hugo 0.82.0"><meta name=theme-color content="#fff"><meta name=viewport content="width=device-width,initial-scale=1"><meta name=format-detection content="telephone=no, date=no, address=no, email=no"><meta http-equiv=cache-control content="no-transform"><meta http-equiv=cache-control content="no-siteapp"><title>Dio封装总结 | Dev - jw</title><link rel=stylesheet href=../css/meme.min.ae509b8259cb6c090411be6371211f6bb00631055ec9b68a994f27bb5f5f5f76.css><script src=../js/meme.min.3a56ecbb4ec7b23a805fc0116d4dac9095813dfd877cd8379675a8bdac538ffe.js></script><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400;1,700&family=Noto+Serif+SC:wght@400;500;700&family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap" media=print onload="this.media='all'"><noscript><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400;1,700&family=Noto+Serif+SC:wght@400;500;700&family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap"></noscript><meta name=author content="Dev - jw"><meta name=description content="网络请求在实际开发中，会频繁的被使用到，如何在 Dio的基础上封装一个更加易用、方便的……"><link rel="shortcut icon" href=../favicon.ico type=image/x-icon><link rel=mask-icon href=../icons/safari-pinned-tab.svg color=#2a6df4><link rel=apple-touch-icon sizes=180x180 href=../icons/apple-touch-icon.png><meta name=apple-mobile-web-app-capable content="yes"><meta name=apple-mobile-web-app-title content="Dev - jw"><meta name=apple-mobile-web-app-status-bar-style content="black"><meta name=mobile-web-app-capable content="yes"><meta name=application-name content="Dev - jw"><meta name=msapplication-starturl content="../"><meta name=msapplication-TileColor content="#fff"><meta name=msapplication-TileImage content="../icons/mstile-150x150.png"><link rel=manifest href=../manifest.json><link rel=canonical href=https://dev.hjw.best/Dio/><script type=application/ld+json>{"@context":"https://schema.org","@type":"WebPage","datePublished":"2020-06-11T17:41:03+08:00","dateModified":"2021-03-31T15:42:56+08:00","url":"https://dev.hjw.best/Dio/","name":"Dio封装总结","description":"网络请求在实际开发中，会频繁的被使用到，如何在 Dio的基础上封装一个更加易用、方便的……","image":"https://dev.hjw.best/favicon.ico","license":"Copyright","publisher":{"@type":"Organization","name":"Dev - jw","logo":{"@type":"ImageObject","url":"https://dev.hjw.best/favicon.ico"},"url":"https://dev.hjw.best/"},"mainEntityOfPage":{"@type":"WebSite","@id":"https://dev.hjw.best/"}}</script><meta name=twitter:card content="summary"><meta property="og:title" content="Dio封装总结"><meta property="og:description" content="网络请求在实际开发中，会频繁的被使用到，如何在 Dio的基础上封装一个更加易用、方便的……"><meta property="og:url" content="https://dev.hjw.best/Dio/"><meta property="og:site_name" content="Dev - jw"><meta property="og:locale" content="zh"><meta property="og:image" content="https://dev.hjw.best/favicon.ico"><meta property="og:type" content="website"><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=Lato:wght@700&text=reuixiy&display=swap" media=print onload="this.media='all'"><noscript><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=Lato:wght@700&text=reuixiy&display=swap"></noscript><meta name=baidu-site-verification content="5nzYjT6RG7"></head><body><div class=container><header class=header><div class=header-wrapper><div class="header-inner single"><div class=site-brand><a href=../ class=brand>Dev - jw</a></div><nav class=nav><ul class=menu id=menu><li class=menu-item><a href=../about><span class=menu-item-name>关于</span></a></li><li class=menu-item><a id=theme-switcher href=#><span class="icon theme-icon-light">🌞</span><span class="icon theme-icon-dark">🌙</span></a></li></ul></nav></div></div><input type=checkbox id=nav-toggle aria-hidden=true>
+<label for=nav-toggle class=nav-toggle></label><label for=nav-toggle class=nav-curtain></label></header><main class="main single" id=main><div class=main-inner><article class="content post h-entry" data-align=default data-type=posts data-toc-num=true><h1 class="post-title p-name">Dio封装总结</h1><div class=post-meta><time datetime=2020-06-11T17:41:03+08:00 class="post-meta-item published dt-published"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="icon post-meta-icon"><path d="M148 288h-40c-6.6.0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v40c0 6.6-5.4 12-12 12zm108-12v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm96 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm-96 96v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm-96 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm192 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm96-260v352c0 26.5-21.5 48-48 48H48c-26.5.0-48-21.5-48-48V112c0-26.5 21.5-48 48-48h48V12c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v52h128V12c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v52h48c26.5.0 48 21.5 48 48zm-48 346V160H48v298c0 3.3 2.7 6 6 6h340c3.3.0 6-2.7 6-6z"/></svg>&nbsp;2020-06-11</time></div><div class="post-body e-content"><blockquote><p>网络请求在实际开发中，会频繁的被使用到，如何在 <code>Dio</code>的基础上封装一个更加易用、方便的请求库呢</p></blockquote><h3 id=dio-了解><a href=#dio-了解 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>Dio 了解</h3><p>在 <strong>Flutter</strong> 中，<strong><a href=https://github.com/flutterchina/dio target=_blank rel=noopener>Dio</a></strong> 是一个非常强大的第三方网络请求库，支持 Restful Api、FormData、拦截器、请求取消、Cookie 管理、文件上传/下载、超时等等很多功能。</p><p>在<a href=https://github.com/flutterchina/dio/blob/master/README-ZH.md target=_blank rel=noopener>官方文档</a>上，有很具体的示例，指导我们怎么去使用它。</p><h3 id=在封装之前><a href=#在封装之前 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>在封装之前</h3><p>在开始着手封装 <strong>Dio</strong> 之前，我们需要思考最为关键的问题：为什么要二次封装 <strong>Dio</strong>？</p><p>假设，你是直接使用 <code>Dio</code> 进行网络请求的发送，当 <code>Dio</code> 升级或替换请求库时，你需要将当前项目文件中，所有使用到 <code>Dio</code> 的地方进行修改，这个工作量是非常巨大的。</p><p>现在，当你基于 <code>Dio</code> 封装了一个专门的请求管理器，无论你是升级或是替换 <code>Dio</code>，你都只需要修改这个管理器就可以了，相对于这个请求管理器充当了中间件的角色。</p><h3 id=设计网络请求管理类><a href=#设计网络请求管理类 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>设计网络请求管理类</h3><p><img src=https://w-md.imzsy.design/image-20200617180436709.png alt=image-20200617180436709></p><p>先来看一下 <code>index.dart</code> 文件，这个文件只是将其他的文件进行了导出操作。</p><div class=highlight><pre class=chroma><code class=language-dart data-lang=dart><span class=k>export</span> <span class=s1>&#39;./abs_network_io.dart&#39;</span><span class=p>;</span>
+<span class=k>export</span> <span class=s1>&#39;./auth_interceptor.dart&#39;</span><span class=p>;</span>
+<span class=k>export</span> <span class=s1>&#39;./api_manager.dart&#39;</span><span class=p>;</span>
+<span class=k>export</span> <span class=s1>&#39;./connectivity_manager.dart&#39;</span><span class=p>;</span>
+</code></pre></div><p>接着来看一看 <code>abs_network_io</code>文件</p><div class=highlight><pre class=chroma><code class=language-dart data-lang=dart><span class=n>AbsNetworkIo</span> <span class=n>createAbsNetworkIo</span><span class=p>(</span><span class=n>BaseOptions</span> <span class=n>_baseOptions</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=n>AbsNetworkIo</span><span class=p>(</span><span class=nl>options:</span> <span class=n>_baseOptions</span><span class=p>);</span>
+
+<span class=kd>abstract</span> <span class=kd>class</span> <span class=nc>AbsNetworkIo</span> <span class=p>{</span>
+  <span class=kd>factory</span> <span class=n>AbsNetworkIo</span><span class=p>({</span><span class=n>BaseOptions</span> <span class=n>options</span><span class=p>})</span> <span class=o>=&gt;</span> <span class=n>createAbsNetworkIo</span><span class=p>(</span><span class=n>options</span><span class=p>);</span>
+
+  <span class=n>BaseOptions</span> <span class=kd>get</span> <span class=n>options</span><span class=p>;</span>
+
+  <span class=kt>void</span> <span class=n>addInterceptor</span><span class=p>(</span><span class=n>Interceptor</span> <span class=n>interceptor</span><span class=p>);</span>
+  <span class=kt>void</span> <span class=n>enableAuthTokenCheck</span><span class=p>(</span><span class=n>AuthTokenListener</span> <span class=n>authTokenListener</span><span class=p>);</span>
+  <span class=kt>void</span> <span class=n>responseBodyWrapper</span><span class=p>(</span><span class=kt>String</span> <span class=n>attributeName</span><span class=p>);</span>
+
+  <span class=kt>void</span> <span class=n>enableLogging</span><span class=p>({</span>
+    <span class=kt>bool</span> <span class=n>request</span> <span class=o>=</span> <span class=kc>true</span><span class=p>,</span>
+    <span class=kt>bool</span> <span class=n>requestHeader</span> <span class=o>=</span> <span class=kc>true</span><span class=p>,</span>
+    <span class=kt>bool</span> <span class=n>requestBody</span> <span class=o>=</span> <span class=kc>false</span><span class=p>,</span>
+    <span class=kt>bool</span> <span class=n>responseHeader</span> <span class=o>=</span> <span class=kc>true</span><span class=p>,</span>
+    <span class=kt>bool</span> <span class=n>responseBody</span> <span class=o>=</span> <span class=kc>false</span><span class=p>,</span>
+    <span class=kt>bool</span> <span class=n>error</span> <span class=o>=</span> <span class=kc>true</span><span class=p>,</span>
+    <span class=n>Function</span><span class=p>(</span><span class=kt>Object</span> <span class=n>object</span><span class=p>)</span> <span class=n>logPrint</span><span class=p>,</span>
+  <span class=p>});</span>
+
+  <span class=n>Future</span><span class=o>&lt;</span><span class=n>MultipartFile</span><span class=o>&gt;</span> <span class=n>getMultipartFromFile</span><span class=p>(</span><span class=kt>String</span> <span class=n>filePath</span><span class=p>);</span>
+
+  <span class=n>Future</span><span class=o>&lt;</span><span class=n>MultipartFile</span><span class=o>&gt;</span> <span class=n>getMultipartFromBytes</span><span class=p>(</span><span class=n>Uint8List</span> <span class=n>bytes</span><span class=p>,</span>
+      <span class=p>[</span><span class=kt>String</span> <span class=n>fileName</span><span class=p>]);</span>
+
+  <span class=n>Future</span><span class=o>&lt;</span><span class=n>ApiResponse</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;&gt;</span> <span class=n>request</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;</span><span class=p>({</span>
+    <span class=err>@</span><span class=n>required</span> <span class=kt>String</span> <span class=n>route</span><span class=p>,</span>
+    <span class=err>@</span><span class=n>required</span> <span class=n>RequestType</span> <span class=n>requestType</span><span class=p>,</span>
+    <span class=n>Map</span><span class=o>&lt;</span><span class=kt>String</span><span class=p>,</span> <span class=kt>dynamic</span><span class=o>&gt;</span> <span class=n>requestParams</span><span class=p>,</span>
+    <span class=kt>dynamic</span> <span class=n>requestBody</span><span class=p>,</span>
+    <span class=n>CancelToken</span> <span class=n>cancelToken</span><span class=p>,</span>
+    <span class=kt>bool</span> <span class=n>isAuthRequired</span> <span class=o>=</span> <span class=kc>false</span><span class=p>,</span>
+    <span class=n>ResponseBodySerializer</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;</span> <span class=n>responseBodySerializer</span><span class=p>,</span>
+    <span class=kt>dynamic</span> <span class=n>responseBodyWrapper</span><span class=p>,</span>
+    <span class=n>Options</span> <span class=n>options</span><span class=p>,</span>
+    <span class=n>ProgressCallback</span> <span class=n>onSendProgress</span><span class=p>,</span>
+    <span class=n>ProgressCallback</span> <span class=n>onReceiveProgress</span><span class=p>,</span>
+  <span class=p>});</span>
+<span class=p>}</span>
+
+<span class=c1>/// contains api status, body data, and error message
+</span><span class=c1></span><span class=kd>class</span> <span class=nc>ApiResponse</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;</span> <span class=p>{</span>
+  <span class=n>ApiStatus</span> <span class=n>status</span><span class=p>;</span>
+  <span class=n>T</span> <span class=n>data</span><span class=p>;</span>
+  <span class=kt>String</span> <span class=n>errorMessage</span><span class=p>;</span>
+
+  <span class=n>ApiResponse</span><span class=p>.</span><span class=n>loading</span><span class=p>()</span> <span class=o>:</span> <span class=n>status</span> <span class=o>=</span> <span class=n>ApiStatus</span><span class=p>.</span><span class=n>LOADING</span><span class=p>;</span>
+  <span class=n>ApiResponse</span><span class=p>.</span><span class=n>completed</span><span class=p>(</span><span class=k>this</span><span class=p>.</span><span class=n>data</span><span class=p>)</span> <span class=o>:</span> <span class=n>status</span> <span class=o>=</span> <span class=n>ApiStatus</span><span class=p>.</span><span class=n>SUCCESS</span><span class=p>;</span>
+  <span class=n>ApiResponse</span><span class=p>.</span><span class=n>error</span><span class=p>(</span><span class=k>this</span><span class=p>.</span><span class=n>errorMessage</span><span class=p>)</span> <span class=o>:</span> <span class=n>status</span> <span class=o>=</span> <span class=n>ApiStatus</span><span class=p>.</span><span class=n>ERROR</span><span class=p>;</span>
+
+  <span class=err>@</span><span class=n>override</span>
+  <span class=kt>String</span> <span class=n>toString</span><span class=p>()</span> <span class=p>{</span>
+    <span class=k>return</span> <span class=s2>&#34;Status : </span><span class=si>$</span><span class=n>status</span><span class=s2> </span><span class=se>\n</span><span class=s2> Message : </span><span class=si>$</span><span class=n>errorMessage</span><span class=s2> </span><span class=se>\n</span><span class=s2> Data : </span><span class=si>$</span><span class=n>data</span><span class=s2>&#34;</span><span class=p>;</span>
+  <span class=p>}</span>
+<span class=p>}</span>
+
+<span class=c1>/// error body of http response
+</span><span class=c1></span><span class=kd>class</span> <span class=nc>ErrorBody</span> <span class=p>{</span>
+  <span class=kt>String</span> <span class=n>message</span><span class=p>;</span>
+  <span class=n>ErrorBody</span><span class=p>({</span><span class=k>this</span><span class=p>.</span><span class=n>message</span><span class=p>});</span>
+  <span class=kd>factory</span> <span class=n>ErrorBody</span><span class=p>.</span><span class=n>fromJson</span><span class=p>(</span><span class=n>Map</span><span class=o>&lt;</span><span class=kt>String</span><span class=p>,</span> <span class=kt>dynamic</span><span class=o>&gt;</span> <span class=n>jsonMap</span><span class=p>)</span> <span class=p>{</span>
+    <span class=k>return</span> <span class=n>ErrorBody</span><span class=p>(</span><span class=nl>message:</span> <span class=n>jsonMap</span><span class=p>[</span><span class=s1>&#39;message&#39;</span><span class=p>]);</span>
+  <span class=p>}</span>
+<span class=p>}</span>
+
+<span class=c1>/// enable parsing http response using this [request]
+</span><span class=c1></span><span class=kd>typedef</span> <span class=n>M</span> <span class=n>ResponseBodySerializer</span><span class=o>&lt;</span><span class=n>M</span><span class=o>&gt;</span><span class=p>(</span><span class=kt>dynamic</span> <span class=n>jsonMap</span><span class=p>);</span>
+
+<span class=c1>/// enable auth token checker by pass this to [enableAuthTokenCheck]
+</span><span class=c1></span><span class=kd>typedef</span> <span class=n>Future</span><span class=o>&lt;</span><span class=kt>String</span><span class=o>&gt;</span> <span class=n>AuthTokenListener</span><span class=p>();</span>
+
+<span class=c1>/// Http request type
+</span><span class=c1></span><span class=n>enum</span> <span class=n>RequestType</span> <span class=p>{</span> <span class=n>GET</span><span class=p>,</span> <span class=n>POST</span><span class=p>,</span> <span class=n>PUT</span><span class=p>,</span> <span class=n>DELETE</span> <span class=p>}</span>
+
+<span class=c1>/// Api status state
+</span><span class=c1></span><span class=n>enum</span> <span class=n>ApiStatus</span> <span class=p>{</span> <span class=n>LOADING</span><span class=p>,</span> <span class=n>SUCCESS</span><span class=p>,</span> <span class=n>ERROR</span> <span class=p>}</span>
+
+</code></pre></div><p>首先，将<code>AbsNetworkIo</code>设计为抽象类，定义了项目网络请求的相关配置以及统一的网络请求方式，同时还定义 <code>APIResponse</code> 和 <code>ErrorBody</code> 类，对返回的结果以及错误进行格式化，配置 <code>ResponseBodySerializer</code> 对成功返回数据进行自定义解析等。</p><p>再来，看一下<code>auth_interceptor</code>这个类的具体实现</p><div class=highlight><pre class=chroma><code class=language-dart data-lang=dart><span class=kd>class</span> <span class=nc>AuthInterceptor</span> <span class=kd>extends</span> <span class=n>Interceptor</span> <span class=p>{</span>
+  <span class=n>AuthInterceptor</span><span class=p>(</span><span class=k>this</span><span class=p>.</span><span class=n>_authTokenListener</span><span class=p>);</span>
+
+  <span class=n>AuthTokenListener</span> <span class=n>_authTokenListener</span><span class=p>;</span>
+
+  <span class=err>@</span><span class=n>override</span>
+  <span class=n>Future</span> <span class=n>onRequest</span><span class=p>(</span><span class=n>RequestOptions</span> <span class=n>options</span><span class=p>)</span> <span class=kd>async</span> <span class=p>{</span>
+    <span class=k>if</span> <span class=p>(</span><span class=n>options</span> <span class=o>!=</span> <span class=kc>null</span> <span class=o>&amp;&amp;</span>
+        <span class=n>options</span><span class=p>.</span><span class=n>headers</span><span class=p>.</span><span class=n>containsKey</span><span class=p>(</span><span class=s2>&#34;isauthrequired&#34;</span><span class=p>)</span> <span class=o>&amp;&amp;</span>
+        <span class=n>options</span><span class=p>.</span><span class=n>headers</span><span class=p>[</span><span class=s2>&#34;isauthrequired&#34;</span><span class=p>])</span> <span class=p>{</span>
+      <span class=k>if</span> <span class=p>(</span><span class=n>_authTokenListener</span> <span class=o>!=</span> <span class=kc>null</span><span class=p>)</span> <span class=p>{</span>
+        <span class=n>options</span><span class=p>.</span><span class=n>headers</span><span class=p>.</span><span class=n>remove</span><span class=p>(</span><span class=s2>&#34;isauthrequired&#34;</span><span class=p>);</span>
+        <span class=kt>String</span> <span class=n>token</span> <span class=o>=</span> <span class=kd>await</span> <span class=n>_authTokenListener</span><span class=p>();</span>
+        <span class=n>options</span><span class=p>.</span><span class=n>headers</span><span class=p>.</span><span class=n>addAll</span><span class=p>({</span>
+          <span class=s2>&#34;Authorization&#34;</span><span class=o>:</span> <span class=n>token</span><span class=p>,</span>
+        <span class=p>});</span>
+        <span class=k>return</span> <span class=n>options</span><span class=p>;</span>
+      <span class=p>}</span> <span class=k>else</span> <span class=p>{</span>
+        <span class=n>print</span><span class=p>(</span><span class=s1>&#39;Ignoring auth token for request&#39;</span><span class=p>);</span>
+        <span class=k>return</span> <span class=n>options</span><span class=o>?</span><span class=p>.</span><span class=n>cancelToken</span><span class=o>?</span><span class=p>.</span><span class=n>cancel</span><span class=p>();</span>
+      <span class=p>}</span>
+    <span class=p>}</span>
+  <span class=p>}</span>
+<span class=p>}</span>
+</code></pre></div><p><code>Dio</code>官方文档上，对于<strong>拦截器</strong>有具体的介绍，每个 <code>Dio</code> 实例都可以添加任意多个拦截器，他们组成一个队列，拦截器队列的执行顺序是<strong>FIFO</strong>。</p><p>通过拦截器你可以在请求之前或响应之后(但还没有被 <code>then</code> 或 <code>catchError</code>处理)做一些统一的预处理操作。</p><p>而在<code>auth_interceptor</code>的实现，就是通过继承 <code>Interceptor</code> 并重写 <code>onRequest</code> 方法，向 <strong>header</strong> 加入 <strong>token</strong>。</p><p><code>connectivity_manager</code>文件，主要是通过第三方库<code>connectivity</code>监控当前网络环境。</p><div class=highlight><pre class=chroma><code class=language-dart data-lang=dart><span class=kd>class</span> <span class=nc>ConnectivityManager</span> <span class=p>{</span>
+  <span class=kd>static</span> <span class=n>isConnected</span><span class=p>()</span> <span class=kd>async</span> <span class=p>{</span>
+    <span class=kd>var</span> <span class=n>connectivityResult</span> <span class=o>=</span> <span class=kd>await</span> <span class=p>(</span><span class=n>Connectivity</span><span class=p>().</span><span class=n>checkConnectivity</span><span class=p>());</span>
+    <span class=k>if</span> <span class=p>(</span><span class=n>connectivityResult</span> <span class=o>==</span> <span class=n>ConnectivityResult</span><span class=p>.</span><span class=n>mobile</span><span class=p>)</span> <span class=p>{</span>
+      <span class=k>return</span> <span class=kc>true</span><span class=p>;</span>
+    <span class=p>}</span> <span class=k>else</span> <span class=k>if</span> <span class=p>(</span><span class=n>connectivityResult</span> <span class=o>==</span> <span class=n>ConnectivityResult</span><span class=p>.</span><span class=n>wifi</span><span class=p>)</span> <span class=p>{</span>
+      <span class=k>return</span> <span class=kc>true</span><span class=p>;</span>
+    <span class=p>}</span>
+    <span class=k>return</span> <span class=kc>false</span><span class=p>;</span>
+  <span class=p>}</span>
+<span class=p>}</span>
+</code></pre></div><p>最后，我们来看一下，最为关键的<code>api_manager</code>中具体做了些什么吧</p><div class=highlight><pre class=chroma><code class=language-dart data-lang=dart><span class=kd>class</span> <span class=nc>ApiManager</span> <span class=kd>implements</span> <span class=n>AbsNetworkIo</span> <span class=p>{</span>
+  <span class=n>Dio</span> <span class=n>_dio</span><span class=p>;</span>
+
+  <span class=n>ApiManager</span><span class=p>({</span><span class=n>BaseOptions</span> <span class=n>baseOptions</span><span class=p>})</span> <span class=p>{</span>
+    <span class=n>_dio</span> <span class=o>=</span> <span class=n>Dio</span><span class=p>(</span><span class=n>baseOptions</span><span class=p>);</span>
+    <span class=n>_dio</span><span class=p>.</span><span class=n>options</span><span class=p>.</span><span class=n>connectTimeout</span> <span class=o>=</span> <span class=m>10000</span><span class=p>;</span>
+    <span class=n>_dio</span><span class=p>.</span><span class=n>options</span><span class=p>.</span><span class=n>receiveTimeout</span> <span class=o>=</span> <span class=m>30000</span><span class=p>;</span>
+    <span class=n>_dio</span><span class=p>.</span><span class=n>options</span><span class=p>.</span><span class=n>headers</span><span class=p>[</span><span class=s1>&#39;content-Type&#39;</span><span class=p>]</span> <span class=o>=</span> <span class=s1>&#39;application/json&#39;</span><span class=p>;</span>
+    <span class=n>_dio</span><span class=p>.</span><span class=n>options</span><span class=p>.</span><span class=n>headers</span><span class=p>[</span><span class=s1>&#39;Accept&#39;</span><span class=p>]</span> <span class=o>=</span> <span class=s1>&#39;application/json&#39;</span><span class=p>;</span>
+  <span class=p>}</span>
+
+  <span class=kd>static</span> <span class=kd>const</span> <span class=n>_successCodeList</span> <span class=o>=</span> <span class=p>[</span><span class=m>200</span><span class=p>];</span>
+
+  <span class=kt>String</span> <span class=n>_responseBodyWrapper</span><span class=p>;</span>
+
+  <span class=err>@</span><span class=n>override</span>
+  <span class=n>BaseOptions</span> <span class=kd>get</span> <span class=n>options</span> <span class=p>{</span>
+    <span class=k>return</span> <span class=n>_dio</span><span class=p>.</span><span class=n>options</span><span class=p>;</span>
+  <span class=p>}</span>
+
+  <span class=err>@</span><span class=n>override</span>
+  <span class=kt>void</span> <span class=n>addInterceptor</span><span class=p>(</span><span class=n>Interceptor</span> <span class=n>interceptor</span><span class=p>)</span> <span class=p>{</span>
+    <span class=n>_dio</span><span class=p>.</span><span class=n>interceptors</span><span class=p>.</span><span class=n>add</span><span class=p>(</span><span class=n>interceptor</span><span class=p>);</span>
+  <span class=p>}</span>
+
+  <span class=err>@</span><span class=n>override</span>
+  <span class=kt>void</span> <span class=n>enableAuthTokenCheck</span><span class=p>(</span><span class=n>authTokenListener</span><span class=p>)</span> <span class=p>{</span>
+    <span class=n>_dio</span><span class=p>.</span><span class=n>interceptors</span><span class=p>.</span><span class=n>add</span><span class=p>(</span>
+      <span class=n>AuthInterceptor</span><span class=p>(</span><span class=n>authTokenListener</span><span class=p>),</span>
+    <span class=p>);</span>
+  <span class=p>}</span>
+
+  <span class=err>@</span><span class=n>override</span>
+  <span class=kt>void</span> <span class=n>responseBodyWrapper</span><span class=p>(</span><span class=kt>String</span> <span class=n>attributeName</span><span class=p>)</span> <span class=p>{</span>
+    <span class=n>_responseBodyWrapper</span> <span class=o>=</span> <span class=n>attributeName</span><span class=p>;</span>
+  <span class=p>}</span>
+
+  <span class=err>@</span><span class=n>override</span>
+  <span class=kt>void</span> <span class=n>enableLogging</span><span class=p>({</span>
+    <span class=kt>bool</span> <span class=n>request</span> <span class=o>=</span> <span class=kc>true</span><span class=p>,</span>
+    <span class=kt>bool</span> <span class=n>requestHeader</span> <span class=o>=</span> <span class=kc>true</span><span class=p>,</span>
+    <span class=kt>bool</span> <span class=n>requestBody</span> <span class=o>=</span> <span class=kc>false</span><span class=p>,</span>
+    <span class=kt>bool</span> <span class=n>responseHeader</span> <span class=o>=</span> <span class=kc>true</span><span class=p>,</span>
+    <span class=kt>bool</span> <span class=n>responseBody</span> <span class=o>=</span> <span class=kc>false</span><span class=p>,</span>
+    <span class=kt>bool</span> <span class=n>error</span> <span class=o>=</span> <span class=kc>true</span><span class=p>,</span>
+    <span class=n>Function</span><span class=p>(</span><span class=kt>Object</span> <span class=n>object</span><span class=p>)</span> <span class=n>logPrint</span> <span class=o>=</span> <span class=n>print</span><span class=p>,</span>
+  <span class=p>})</span> <span class=p>{</span>
+    <span class=n>_dio</span><span class=p>.</span><span class=n>interceptors</span><span class=p>.</span><span class=n>add</span><span class=p>(</span>
+      <span class=n>LogInterceptor</span><span class=p>(</span>
+          <span class=nl>request:</span> <span class=n>request</span><span class=p>,</span>
+          <span class=nl>requestHeader:</span> <span class=n>requestHeader</span><span class=p>,</span>
+          <span class=nl>requestBody:</span> <span class=n>requestBody</span><span class=p>,</span>
+          <span class=nl>responseHeader:</span> <span class=n>responseHeader</span><span class=p>,</span>
+          <span class=nl>responseBody:</span> <span class=n>responseBody</span><span class=p>,</span>
+          <span class=nl>error:</span> <span class=n>error</span><span class=p>,</span>
+          <span class=nl>logPrint:</span> <span class=n>logPrint</span><span class=p>),</span>
+    <span class=p>);</span>
+  <span class=p>}</span>
+
+  <span class=err>@</span><span class=n>override</span>
+  <span class=n>Future</span><span class=o>&lt;</span><span class=n>MultipartFile</span><span class=o>&gt;</span> <span class=n>getMultipartFromFile</span><span class=p>(</span><span class=kt>String</span> <span class=n>filePath</span><span class=p>)</span> <span class=kd>async</span> <span class=p>{</span>
+    <span class=kt>String</span> <span class=n>fileName</span> <span class=o>=</span> <span class=n>filePath</span><span class=p>.</span><span class=n>split</span><span class=p>(</span><span class=s1>&#39;/&#39;</span><span class=p>).</span><span class=n>last</span><span class=p>;</span>
+    <span class=k>return</span> <span class=kd>await</span> <span class=n>MultipartFile</span><span class=p>.</span><span class=n>fromFile</span><span class=p>(</span><span class=n>filePath</span><span class=p>,</span> <span class=nl>filename:</span> <span class=n>fileName</span><span class=p>);</span>
+  <span class=p>}</span>
+
+  <span class=err>@</span><span class=n>override</span>
+  <span class=n>Future</span><span class=o>&lt;</span><span class=n>MultipartFile</span><span class=o>&gt;</span> <span class=n>getMultipartFromBytes</span><span class=p>(</span><span class=n>Uint8List</span> <span class=n>bytes</span><span class=p>,</span>
+      <span class=p>[</span><span class=kt>String</span> <span class=n>fileName</span><span class=p>])</span> <span class=kd>async</span> <span class=p>{</span>
+    <span class=k>return</span> <span class=n>MultipartFile</span><span class=p>.</span><span class=n>fromBytes</span><span class=p>(</span><span class=n>bytes</span><span class=p>,</span> <span class=nl>filename:</span> <span class=n>fileName</span><span class=p>);</span>
+  <span class=p>}</span>
+
+  <span class=err>@</span><span class=n>override</span>
+  <span class=n>Future</span><span class=o>&lt;</span><span class=n>ApiResponse</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;&gt;</span> <span class=n>request</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;</span><span class=p>({</span>
+    <span class=err>@</span><span class=n>required</span> <span class=kt>String</span> <span class=n>route</span><span class=p>,</span>
+    <span class=err>@</span><span class=n>required</span> <span class=n>RequestType</span> <span class=n>requestType</span><span class=p>,</span>
+    <span class=n>Map</span><span class=o>&lt;</span><span class=kt>String</span><span class=p>,</span> <span class=kt>dynamic</span><span class=o>&gt;</span> <span class=n>requestParams</span><span class=p>,</span>
+    <span class=kt>dynamic</span> <span class=n>requestBody</span><span class=p>,</span>
+    <span class=n>CancelToken</span> <span class=n>cancelToken</span><span class=p>,</span>
+    <span class=kt>bool</span> <span class=n>isAuthRequired</span> <span class=o>=</span> <span class=kc>false</span><span class=p>,</span>
+    <span class=n>ResponseBodySerializer</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;</span> <span class=n>responseBodySerializer</span><span class=p>,</span>
+    <span class=kt>dynamic</span> <span class=n>responseBodyWrapper</span><span class=p>,</span>
+    <span class=n>Options</span> <span class=n>options</span><span class=p>,</span>
+    <span class=n>ProgressCallback</span> <span class=n>onSendProgress</span><span class=p>,</span>
+    <span class=n>ProgressCallback</span> <span class=n>onReceiveProgress</span><span class=p>,</span>
+  <span class=p>})</span> <span class=kd>async</span> <span class=p>{</span>
+    <span class=c1>/// check internet connectivity &amp; return an internet error message
+</span><span class=c1></span>    <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=kd>await</span> <span class=n>ConnectivityManager</span><span class=p>.</span><span class=n>isConnected</span><span class=p>())</span> <span class=p>{</span>
+      <span class=k>return</span> <span class=n>_internetError</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;</span><span class=p>();</span>
+    <span class=p>}</span>
+
+    <span class=k>if</span> <span class=p>(</span><span class=n>options</span> <span class=o>==</span> <span class=kc>null</span><span class=p>)</span> <span class=p>{</span>
+      <span class=n>options</span> <span class=o>=</span> <span class=n>Options</span><span class=p>();</span>
+    <span class=p>}</span>
+    <span class=n>options</span> <span class=o>=</span> <span class=n>Options</span><span class=p>(</span><span class=nl>headers:</span> <span class=p>{</span><span class=s2>&#34;isauthrequired&#34;</span><span class=o>:</span> <span class=n>isAuthRequired</span><span class=p>});</span>
+
+    <span class=k>try</span> <span class=p>{</span>
+      <span class=k>switch</span> <span class=p>(</span><span class=n>requestType</span><span class=p>)</span> <span class=p>{</span>
+
+        <span class=c1>/// http get request method
+</span><span class=c1></span>        <span class=k>case</span> <span class=n>RequestType</span><span class=p>.</span><span class=nl>GET:</span>
+          <span class=kd>final</span> <span class=n>response</span> <span class=o>=</span> <span class=kd>await</span> <span class=n>_dio</span><span class=p>.</span><span class=kd>get</span><span class=p>(</span>
+            <span class=n>route</span><span class=p>,</span>
+            <span class=nl>queryParameters:</span> <span class=n>requestParams</span><span class=p>,</span>
+            <span class=nl>cancelToken:</span> <span class=n>cancelToken</span><span class=p>,</span>
+            <span class=nl>options:</span> <span class=n>options</span><span class=p>,</span>
+            <span class=nl>onReceiveProgress:</span> <span class=n>onReceiveProgress</span><span class=p>,</span>
+          <span class=p>);</span>
+          <span class=k>return</span> <span class=n>_returnResponse</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;</span><span class=p>(</span>
+            <span class=n>response</span><span class=p>,</span>
+            <span class=n>responseBodySerializer</span><span class=p>,</span>
+            <span class=n>responseBodyWrapper</span><span class=p>,</span>
+          <span class=p>);</span>
+
+        <span class=c1>/// http post request method
+</span><span class=c1></span>        <span class=k>case</span> <span class=n>RequestType</span><span class=p>.</span><span class=nl>POST:</span>
+          <span class=kd>final</span> <span class=n>response</span> <span class=o>=</span> <span class=kd>await</span> <span class=n>_dio</span><span class=p>.</span><span class=n>post</span><span class=p>(</span>
+            <span class=n>route</span><span class=p>,</span>
+            <span class=nl>data:</span> <span class=n>requestBody</span><span class=p>,</span>
+            <span class=nl>queryParameters:</span> <span class=n>requestParams</span><span class=p>,</span>
+            <span class=nl>cancelToken:</span> <span class=n>cancelToken</span><span class=p>,</span>
+            <span class=nl>options:</span> <span class=n>options</span><span class=p>,</span>
+            <span class=nl>onSendProgress:</span> <span class=n>onSendProgress</span><span class=p>,</span>
+            <span class=nl>onReceiveProgress:</span> <span class=n>onReceiveProgress</span><span class=p>,</span>
+          <span class=p>);</span>
+          <span class=k>return</span> <span class=n>_returnResponse</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;</span><span class=p>(</span>
+            <span class=n>response</span><span class=p>,</span>
+            <span class=n>responseBodySerializer</span><span class=p>,</span>
+            <span class=n>responseBodyWrapper</span><span class=p>,</span>
+          <span class=p>);</span>
+
+        <span class=c1>/// http put request method
+</span><span class=c1></span>        <span class=k>case</span> <span class=n>RequestType</span><span class=p>.</span><span class=nl>PUT:</span>
+          <span class=kd>final</span> <span class=n>response</span> <span class=o>=</span> <span class=kd>await</span> <span class=n>_dio</span><span class=p>.</span><span class=n>put</span><span class=p>(</span>
+            <span class=n>route</span><span class=p>,</span>
+            <span class=nl>data:</span> <span class=n>requestBody</span><span class=p>,</span>
+            <span class=nl>queryParameters:</span> <span class=n>requestParams</span><span class=p>,</span>
+            <span class=nl>cancelToken:</span> <span class=n>cancelToken</span><span class=p>,</span>
+            <span class=nl>options:</span> <span class=n>options</span><span class=p>,</span>
+            <span class=nl>onSendProgress:</span> <span class=n>onSendProgress</span><span class=p>,</span>
+            <span class=nl>onReceiveProgress:</span> <span class=n>onReceiveProgress</span><span class=p>,</span>
+          <span class=p>);</span>
+          <span class=k>return</span> <span class=n>_returnResponse</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;</span><span class=p>(</span>
+            <span class=n>response</span><span class=p>,</span>
+            <span class=n>responseBodySerializer</span><span class=p>,</span>
+            <span class=n>responseBodyWrapper</span><span class=p>,</span>
+          <span class=p>);</span>
+
+        <span class=c1>/// http delete request method
+</span><span class=c1></span>        <span class=k>case</span> <span class=n>RequestType</span><span class=p>.</span><span class=nl>DELETE:</span>
+          <span class=kd>final</span> <span class=n>response</span> <span class=o>=</span> <span class=kd>await</span> <span class=n>_dio</span><span class=p>.</span><span class=n>delete</span><span class=p>(</span>
+            <span class=n>route</span><span class=p>,</span>
+            <span class=nl>data:</span> <span class=n>requestBody</span><span class=p>,</span>
+            <span class=nl>queryParameters:</span> <span class=n>requestParams</span><span class=p>,</span>
+            <span class=nl>cancelToken:</span> <span class=n>cancelToken</span><span class=p>,</span>
+            <span class=nl>options:</span> <span class=n>options</span><span class=p>,</span>
+          <span class=p>);</span>
+          <span class=k>return</span> <span class=n>_returnResponse</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;</span><span class=p>(</span>
+            <span class=n>response</span><span class=p>,</span>
+            <span class=n>responseBodySerializer</span><span class=p>,</span>
+            <span class=n>responseBodyWrapper</span><span class=p>,</span>
+          <span class=p>);</span>
+
+        <span class=c1>/// throw an exception when no http request method is passed
+</span><span class=c1></span>        <span class=k>default</span><span class=o>:</span>
+          <span class=k>throw</span> <span class=n>Exception</span><span class=p>(</span><span class=s1>&#39;No request type passed&#39;</span><span class=p>);</span>
+      <span class=p>}</span>
+    <span class=p>}</span> <span class=n>on</span> <span class=n>DioError</span> <span class=k>catch</span> <span class=p>(</span><span class=n>error</span><span class=p>)</span> <span class=p>{</span>
+      <span class=n>print</span><span class=p>(</span><span class=n>error</span><span class=p>.</span><span class=n>toString</span><span class=p>());</span>
+      <span class=k>return</span> <span class=n>ApiResponse</span><span class=p>.</span><span class=n>error</span><span class=p>(</span>
+        <span class=n>error</span><span class=p>.</span><span class=n>response</span> <span class=o>==</span> <span class=kc>null</span> <span class=o>?</span> <span class=n>error</span><span class=p>.</span><span class=n>message</span> <span class=o>:</span> <span class=n>error</span><span class=p>.</span><span class=n>response</span><span class=p>.</span><span class=n>toString</span><span class=p>(),</span>
+      <span class=p>);</span>
+    <span class=p>}</span>
+  <span class=p>}</span>
+
+  <span class=c1>/// check the response success status
+</span><span class=c1></span>  <span class=c1>/// then wrap the response with api call
+</span><span class=c1></span>  <span class=c1>/// return {ApiResponse}
+</span><span class=c1></span>  <span class=n>ApiResponse</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;</span> <span class=n>_returnResponse</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;</span><span class=p>(</span>
+    <span class=n>Response</span> <span class=n>response</span><span class=p>,</span>
+    <span class=n>ResponseBodySerializer</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;</span> <span class=n>responseBodySerializer</span><span class=p>,</span>
+    <span class=kt>dynamic</span> <span class=n>responseBodyWrapper</span><span class=p>,</span>
+  <span class=p>)</span> <span class=p>{</span>
+    <span class=k>if</span> <span class=p>(</span><span class=n>_successCodeList</span><span class=p>.</span><span class=n>contains</span><span class=p>(</span><span class=n>response</span><span class=p>.</span><span class=n>statusCode</span><span class=p>))</span> <span class=p>{</span>
+      <span class=k>try</span> <span class=p>{</span>
+        <span class=k>return</span> <span class=n>ApiResponse</span><span class=p>.</span><span class=n>completed</span><span class=p>(</span>
+          <span class=n>responseBodyWrapper</span> <span class=k>is</span> <span class=kt>String</span>
+              <span class=o>?</span> <span class=n>responseBodySerializer</span> <span class=o>!=</span> <span class=kc>null</span>
+                  <span class=o>?</span> <span class=n>responseBodySerializer</span><span class=p>(</span><span class=n>response</span><span class=p>.</span><span class=n>data</span><span class=p>[</span><span class=n>responseBodyWrapper</span><span class=p>])</span>
+                  <span class=o>:</span> <span class=n>response</span><span class=p>.</span><span class=n>data</span><span class=p>[</span><span class=n>responseBodyWrapper</span><span class=p>]</span>
+              <span class=o>:</span> <span class=n>responseBodyWrapper</span> <span class=o>==</span> <span class=kc>false</span>
+                  <span class=o>?</span> <span class=n>responseBodySerializer</span> <span class=o>!=</span> <span class=kc>null</span>
+                      <span class=o>?</span> <span class=n>responseBodySerializer</span><span class=p>(</span><span class=n>response</span><span class=p>.</span><span class=n>data</span><span class=p>)</span>
+                      <span class=o>:</span> <span class=n>response</span><span class=p>.</span><span class=n>data</span>
+                  <span class=o>:</span> <span class=n>_responseBodyWrapper</span> <span class=o>!=</span> <span class=kc>null</span>
+                      <span class=o>?</span> <span class=n>responseBodySerializer</span> <span class=o>!=</span> <span class=kc>null</span>
+                          <span class=o>?</span> <span class=n>responseBodySerializer</span><span class=p>(</span>
+                              <span class=n>response</span><span class=p>.</span><span class=n>data</span><span class=p>[</span><span class=n>_responseBodyWrapper</span><span class=p>])</span>
+                          <span class=o>:</span> <span class=n>response</span><span class=p>.</span><span class=n>data</span><span class=p>[</span><span class=n>_responseBodyWrapper</span><span class=p>]</span>
+                      <span class=o>:</span> <span class=n>responseBodySerializer</span> <span class=o>!=</span> <span class=kc>null</span>
+                          <span class=o>?</span> <span class=n>responseBodySerializer</span><span class=p>(</span><span class=n>response</span><span class=p>.</span><span class=n>data</span><span class=p>)</span>
+                          <span class=o>:</span> <span class=n>response</span><span class=p>.</span><span class=n>data</span><span class=p>,</span>
+        <span class=p>);</span>
+      <span class=p>}</span> <span class=k>catch</span> <span class=p>(</span><span class=n>e</span><span class=p>)</span> <span class=p>{</span>
+        <span class=n>print</span><span class=p>(</span><span class=n>e</span><span class=p>);</span>
+        <span class=k>return</span> <span class=n>ApiResponse</span><span class=p>.</span><span class=n>error</span><span class=p>(</span><span class=s2>&#34;Data Serialization Error: </span><span class=si>$</span><span class=n>e</span><span class=s2>&#34;</span><span class=p>);</span>
+      <span class=p>}</span>
+    <span class=p>}</span> <span class=k>else</span> <span class=p>{</span>
+      <span class=n>print</span><span class=p>(</span><span class=s1>&#39;Dio Error: States Code </span><span class=si>${</span><span class=n>response</span><span class=p>.</span><span class=n>statusCode</span><span class=si>}</span><span class=s1>&#39;</span><span class=p>);</span>
+      <span class=k>return</span> <span class=n>ApiResponse</span><span class=p>.</span><span class=n>error</span><span class=p>(</span><span class=n>response</span><span class=p>.</span><span class=n>statusMessage</span><span class=p>);</span>
+    <span class=p>}</span>
+  <span class=p>}</span>
+
+  <span class=n>ApiResponse</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;</span> <span class=n>_internetError</span><span class=o>&lt;</span><span class=n>T</span><span class=o>&gt;</span><span class=p>()</span> <span class=p>{</span>
+    <span class=k>return</span> <span class=n>ApiResponse</span><span class=p>.</span><span class=n>error</span><span class=p>(</span><span class=s2>&#34;Internet not connected&#34;</span><span class=p>);</span>
+  <span class=p>}</span>
+<span class=p>}</span>
+
+</code></pre></div><p>通过查看代码，我们可以发现 <code>ApiManager</code> 主要是将抽象类 <code>AbsNetworkIo</code> 中的方法进行了具体的实现，即 <code>AbsNetworkIo</code> 声明方法，<code>ApiManager</code> 负责实现。</p><h3 id=具体使用><a href=#具体使用 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>具体使用</h3><p>至此，基于 <code>Dio</code> 的基础封装已经完成，下面来看一下具体的使用示例。</p><p>首先定义一个 <code>ApiRepository</code> 类配置请求</p><div class=highlight><pre class=chroma><code class=language-dart data-lang=dart>
+<span class=kd>const</span> <span class=n>BASE_URL</span> <span class=o>=</span> <span class=s1>&#39;baseUrl&#39;</span><span class=p>;</span>
+<span class=c1>// 请求配置
+</span><span class=c1></span><span class=kd>class</span> <span class=nc>ApiRepository</span> <span class=p>{</span>
+  
+  <span class=kd>static</span> <span class=kd>final</span> <span class=n>ApiRepository</span> <span class=n>_instance</span> <span class=o>=</span> <span class=n>ApiRepository</span><span class=p>.</span><span class=n>_internal</span><span class=p>();</span> <span class=c1>/// singleton api repository
+</span><span class=c1></span>  <span class=n>ApiManager</span> <span class=n>_apiManager</span><span class=p>;</span>
+  
+  <span class=kd>factory</span> <span class=n>ApiRepository</span><span class=p>()</span> <span class=p>{</span>
+    <span class=k>return</span> <span class=n>_instance</span><span class=p>;</span>
+  <span class=p>}</span>
+
+  <span class=c1>/// base configuration for api manager
+</span><span class=c1></span>  <span class=n>ApiRepository</span><span class=p>.</span><span class=n>_internal</span><span class=p>()</span> <span class=p>{</span>
+    <span class=n>_apiManager</span> <span class=o>=</span> <span class=n>ApiManager</span><span class=p>();</span>
+    <span class=n>_apiManager</span><span class=p>.</span><span class=n>options</span><span class=p>.</span><span class=n>baseUrl</span> <span class=o>=</span> <span class=n>BASE_URL</span><span class=p>;</span> 
+    <span class=n>_apiManager</span><span class=p>.</span><span class=n>options</span><span class=p>.</span><span class=n>connectTimeout</span> <span class=o>=</span> <span class=m>100000</span><span class=p>;</span>
+    <span class=n>_apiManager</span><span class=p>.</span><span class=n>options</span><span class=p>.</span><span class=n>receiveTimeout</span> <span class=o>=</span> <span class=m>100000</span><span class=p>;</span>
+    <span class=n>_apiManager</span><span class=p>.</span><span class=n>responseBodyWrapper</span><span class=p>(</span><span class=s1>&#39;data&#39;</span><span class=p>);</span> 
+    <span class=n>_apiManager</span><span class=p>.</span><span class=n>enableLogging</span><span class=p>(</span><span class=nl>responseBody:</span> <span class=kc>true</span><span class=p>,</span> <span class=nl>requestBody:</span> <span class=kc>false</span><span class=p>);</span> 
+  <span class=p>}</span>
+
+  <span class=n>ApiManager</span> <span class=n>getManager</span><span class=p>()</span> <span class=p>{</span>
+    <span class=k>return</span> <span class=n>_apiManager</span><span class=p>;</span>
+  <span class=p>}</span>
+<span class=p>}</span>
+</code></pre></div><p>接着，在具体模型类中，实现具体请求方法，接口 api，返回 body，以及返回 body 的自定义解析。</p><div class=highlight><pre class=chroma><code class=language-dart data-lang=dart><span class=kd>class</span> <span class=nc>ChatApiResponse</span> <span class=p>{</span>
+  <span class=n>ApiManager</span> <span class=n>_apiManager</span> <span class=o>=</span> <span class=n>ApiRepository</span><span class=p>().</span><span class=n>getManager</span><span class=p>();</span>
+  <span class=n>Future</span><span class=o>&lt;</span><span class=n>ApiResponse</span><span class=o>&lt;</span><span class=n>List</span><span class=o>&lt;</span><span class=n>ChatDataResponse</span><span class=o>&gt;&gt;&gt;</span> <span class=n>getRequestChatList</span><span class=p>()</span> <span class=kd>async</span> <span class=o>=&gt;</span>
+      <span class=kd>await</span> <span class=n>_apiManager</span><span class=p>.</span><span class=n>request</span><span class=o>&lt;</span><span class=n>List</span><span class=o>&lt;</span><span class=n>ChatDataResponse</span><span class=o>&gt;&gt;</span><span class=p>(</span>
+        <span class=nl>requestType:</span> <span class=n>RequestType</span><span class=p>.</span><span class=n>GET</span><span class=p>,</span>
+        <span class=nl>route:</span> <span class=s1>&#39;chatlist&#39;</span><span class=p>,</span>
+        <span class=nl>responseBodyWrapper:</span> <span class=s1>&#39;data&#39;</span><span class=p>,</span>
+        <span class=nl>responseBodySerializer:</span> <span class=p>(</span><span class=n>jsonMap</span><span class=p>)</span> <span class=p>{</span>
+          <span class=k>return</span> <span class=n>jsonMap</span><span class=p>.</span><span class=n>map</span><span class=o>&lt;</span><span class=n>ChatDataResponse</span><span class=o>&gt;</span><span class=p>((</span><span class=n>e</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=n>ChatDataResponse</span><span class=p>.</span><span class=n>fromJson</span><span class=p>(</span><span class=n>e</span><span class=p>)).</span><span class=n>toList</span><span class=p>();</span>
+        <span class=p>},</span>
+      <span class=p>);</span>
+<span class=p>}</span>
+
+<span class=kd>class</span> <span class=nc>ChatDataResponse</span> <span class=p>{</span>
+  <span class=kd>final</span> <span class=kt>String</span> <span class=n>name</span><span class=p>;</span>
+  <span class=kd>final</span> <span class=kt>String</span> <span class=n>imgUrl</span><span class=p>;</span>
+  <span class=kd>final</span> <span class=kt>String</span> <span class=n>message</span><span class=p>;</span>
+
+  <span class=kd>const</span> <span class=n>ChatDataResponse</span><span class=p>({</span><span class=k>this</span><span class=p>.</span><span class=n>name</span><span class=p>,</span> <span class=k>this</span><span class=p>.</span><span class=n>imgUrl</span><span class=p>,</span> <span class=k>this</span><span class=p>.</span><span class=n>message</span><span class=p>});</span>
+
+  <span class=kd>factory</span> <span class=n>ChatDataResponse</span><span class=p>.</span><span class=n>fromJson</span><span class=p>(</span><span class=n>Map</span> <span class=n>json</span><span class=p>)</span> <span class=p>{</span>
+    <span class=k>return</span> <span class=n>ChatDataResponse</span><span class=p>(</span>
+      <span class=nl>name:</span> <span class=n>json</span><span class=p>[</span><span class=s1>&#39;name&#39;</span><span class=p>],</span>
+      <span class=nl>imgUrl:</span> <span class=n>json</span><span class=p>[</span><span class=s1>&#39;imgUrl&#39;</span><span class=p>],</span>
+      <span class=nl>message:</span> <span class=n>json</span><span class=p>[</span><span class=s1>&#39;message&#39;</span><span class=p>],</span>
+    <span class=p>);</span>
+  <span class=p>}</span>
+<span class=p>}</span>
+
+</code></pre></div><p>最后，只需要调用 <code>ChatApiResponse().getRequestChatList().then((value) => value.data)</code>，就可以拿到请求返回并解析成对应模型的数据了。</p><h3 id=总结><a href=#总结 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>总结</h3><p>这里具体请求方法，自定义解析放在数据模型类中，是为了让数据模型可以更好的与使用的请求结合在一起，这样也方便去了解和管理，哪个请求返回的结果是对应哪个模型结构。</p><p>当然，这个封装的请求库肯定是有所欠缺的，不够完善的，这只是我对于项目的一些基本封装，在后续会根据具体的实际应用再进行优化。</p></div></article><div class=post-tags><a href=../tags/flutter/ rel=tag class=post-tags-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon tag-icon"><path d="M0 252.118V48C0 21.49 21.49.0 48 0h204.118a48 48 0 0133.941 14.059l211.882 211.882c18.745 18.745 18.745 49.137.0 67.882L293.823 497.941c-18.745 18.745-49.137 18.745-67.882.0L14.059 286.059A48 48 0 010 252.118zM112 64c-26.51.0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48z"/></svg>Flutter</a>
+<a href=../tags/dio/ rel=tag class=post-tags-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon tag-icon"><path d="M0 252.118V48C0 21.49 21.49.0 48 0h204.118a48 48 0 0133.941 14.059l211.882 211.882c18.745 18.745 18.745 49.137.0 67.882L293.823 497.941c-18.745 18.745-49.137 18.745-67.882.0L14.059 286.059A48 48 0 010 252.118zM112 64c-26.51.0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48z"/></svg>Dio</a></div></div></main><div id=back-to-top class=back-to-top><a href=#><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="icon arrow-up"><path d="M34.9 289.5l-22.2-22.2c-9.4-9.4-9.4-24.6.0-33.9L207 39c9.4-9.4 24.6-9.4 33.9.0l194.3 194.3c9.4 9.4 9.4 24.6.0 33.9L413 289.4c-9.5 9.5-25 9.3-34.3-.4L264 168.6V456c0 13.3-10.7 24-24 24h-32c-13.3.0-24-10.7-24-24V168.6L69.2 289.1c-9.3 9.8-24.8 10-34.3.4z"/></svg></a></div><footer id=footer class=footer><div class=footer-inner><div class=site-info>©&nbsp;2019–2021&nbsp;<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon footer-icon"><path d="M462.3 62.6C407.5 15.9 326 24.3 275.7 76.2L256 96.5l-19.7-20.3C186.1 24.3 104.5 15.9 49.7 62.6c-62.8 53.6-66.1 149.8-9.9 207.9l193.5 199.8c12.5 12.9 32.8 12.9 45.3.0l193.5-199.8c56.3-58.1 53-154.3-9.8-207.9z"/></svg>&nbsp;Dev - jw</div></div></footer></div><script>'serviceWorker'in navigator&&window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js')})</script><script>typeof MathJax=='undefined'?(window.MathJax={loader:{load:['[tex]/mhchem']},options:{renderActions:{addMenu:[0,'','']}},tex:{inlineMath:{'[+]':[['$','$']]},tags:'ams',packages:{'[+]':['mhchem']}}},function(){var a=document.createElement('script');a.src='https://cdn.jsdelivr.net/npm/mathjax@3.1.2/es5/tex-mml-chtml.js',a.defer=!0,document.head.appendChild(a)}()):(MathJax.texReset(),MathJax.typeset())</script><script src=https://cdn.jsdelivr.net/npm/mermaid@8.8.3/dist/mermaid.min.js></script><script>let mermaidConfig={startOnLoad:!0,flowchart:{useMaxWidth:!1,htmlLabels:!0},theme:'default'};mermaid.initialize(mermaidConfig)</script><script src=https://cdn.jsdelivr.net/npm/medium-zoom@latest/dist/medium-zoom.min.js></script><script>mediumZoom(document.querySelectorAll('div.post-body img'),{background:'hsla(var(--color-bg-h), var(--color-bg-s), var(--color-bg-l), 0.95)'})</script><script src=https://cdn.jsdelivr.net/npm/instant.page@5.1.0/instantpage.min.js type=module defer></script></body></html>

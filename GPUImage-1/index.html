@@ -1,0 +1,279 @@
+<!doctype html><html lang=zh-cn><head prefix="og: http://ogp.me/ns# article: http://ogp.me/ns/article#"><meta charset=utf-8><meta name=generator content="Hugo 0.82.0"><meta name=theme-color content="#fff"><meta name=viewport content="width=device-width,initial-scale=1"><meta name=format-detection content="telephone=no, date=no, address=no, email=no"><meta http-equiv=cache-control content="no-transform"><meta http-equiv=cache-control content="no-siteapp"><title>GPUImage源码阅读(一) | Dev - jw</title><link rel=stylesheet href=../css/meme.min.ae509b8259cb6c090411be6371211f6bb00631055ec9b68a994f27bb5f5f5f76.css><script src=../js/meme.min.3a56ecbb4ec7b23a805fc0116d4dac9095813dfd877cd8379675a8bdac538ffe.js></script><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400;1,700&family=Noto+Serif+SC:wght@400;500;700&family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap" media=print onload="this.media='all'"><noscript><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400;1,700&family=Noto+Serif+SC:wght@400;500;700&family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap"></noscript><meta name=author content="Dev - jw"><meta name=description content="GPUImage是一个著名的图像处理开源库，它让你能够在图片、视频、相机上使用GPU……"><link rel="shortcut icon" href=../favicon.ico type=image/x-icon><link rel=mask-icon href=../icons/safari-pinned-tab.svg color=#2a6df4><link rel=apple-touch-icon sizes=180x180 href=../icons/apple-touch-icon.png><meta name=apple-mobile-web-app-capable content="yes"><meta name=apple-mobile-web-app-title content="Dev - jw"><meta name=apple-mobile-web-app-status-bar-style content="black"><meta name=mobile-web-app-capable content="yes"><meta name=application-name content="Dev - jw"><meta name=msapplication-starturl content="../"><meta name=msapplication-TileColor content="#fff"><meta name=msapplication-TileImage content="../icons/mstile-150x150.png"><link rel=manifest href=../manifest.json><link rel=canonical href=https://dev.hjw.best/GPUImage-1/><script type=application/ld+json>{"@context":"https://schema.org","@type":"WebPage","datePublished":"2020-08-18T10:04:33+08:00","dateModified":"2021-03-31T15:42:56+08:00","url":"https://dev.hjw.best/GPUImage-1/","name":"GPUImage源码阅读(一)","description":"GPUImage是一个著名的图像处理开源库，它让你能够在图片、视频、相机上使用GPU……","image":"https://dev.hjw.best/favicon.ico","license":"Copyright","publisher":{"@type":"Organization","name":"Dev - jw","logo":{"@type":"ImageObject","url":"https://dev.hjw.best/favicon.ico"},"url":"https://dev.hjw.best/"},"mainEntityOfPage":{"@type":"WebSite","@id":"https://dev.hjw.best/"}}</script><meta name=twitter:card content="summary"><meta property="og:title" content="GPUImage源码阅读(一)"><meta property="og:description" content="GPUImage是一个著名的图像处理开源库，它让你能够在图片、视频、相机上使用GPU……"><meta property="og:url" content="https://dev.hjw.best/GPUImage-1/"><meta property="og:site_name" content="Dev - jw"><meta property="og:locale" content="zh"><meta property="og:image" content="https://dev.hjw.best/favicon.ico"><meta property="og:type" content="website"><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=Lato:wght@700&text=reuixiy&display=swap" media=print onload="this.media='all'"><noscript><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=Lato:wght@700&text=reuixiy&display=swap"></noscript><meta name=baidu-site-verification content="5nzYjT6RG7"></head><body><div class=container><header class=header><div class=header-wrapper><div class="header-inner single"><div class=site-brand><a href=../ class=brand>Dev - jw</a></div><nav class=nav><ul class=menu id=menu><li class=menu-item><a href=../about><span class=menu-item-name>关于</span></a></li><li class=menu-item><a id=theme-switcher href=#><span class="icon theme-icon-light">🌞</span><span class="icon theme-icon-dark">🌙</span></a></li></ul></nav></div></div><input type=checkbox id=nav-toggle aria-hidden=true>
+<label for=nav-toggle class=nav-toggle></label><label for=nav-toggle class=nav-curtain></label></header><main class="main single" id=main><div class=main-inner><article class="content post h-entry" data-align=default data-type=posts data-toc-num=true><h1 class="post-title p-name">GPUImage源码阅读(一)</h1><div class=post-meta><time datetime=2020-08-18T10:04:33+08:00 class="post-meta-item published dt-published"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="icon post-meta-icon"><path d="M148 288h-40c-6.6.0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v40c0 6.6-5.4 12-12 12zm108-12v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm96 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm-96 96v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm-96 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm192 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm96-260v352c0 26.5-21.5 48-48 48H48c-26.5.0-48-21.5-48-48V112c0-26.5 21.5-48 48-48h48V12c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v52h128V12c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v52h48c26.5.0 48 21.5 48 48zm-48 346V160H48v298c0 3.3 2.7 6 6 6h340c3.3.0 6-2.7 6-6z"/></svg>&nbsp;2020-08-18</time></div><div class="post-body e-content"><blockquote><p><a href=https://github.com/BradLarson/GPUImage target=_blank rel=noopener>GPUImage</a>是一个著名的图像处理开源库，它让你能够在图片、视频、相机上使用GPU加速的滤镜和其它特效</p></blockquote><p>本文主要对框架中的 <code>GLProgram</code> 和 <code>GPUImageContext</code>，两个重要类的源码阅读</p><p><strong>预习知识</strong></p><p>阅读 GPUImage 源码需要有一定的基础知识储备:</p><ul><li>OpenGL / OpenGL ES</li><li>AVFoundation</li><li>CoreGraphics</li></ul><blockquote><p>请确保熟悉以上的框架，阅读源码会起到事半功倍</p></blockquote><h4 id=glprogram><a href=#glprogram class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a><code>GLProgram</code></h4><p><code>GLProgram</code> 实现的功能就专门处理 OpenGL ES 自定义着色器程序的创建、编译、链接等相关工作。</p><ul><li><p>初始化</p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=c1>// GLProgram.h
+</span><span class=c1>// 声明的 3 个初始化方法
+</span><span class=c1>// 传入顶点着色器和片段着色器
+</span><span class=c1></span><span class=p>-</span> <span class=p>(</span><span class=kt>id</span><span class=p>)</span><span class=nf>initWithVertexShaderString:</span><span class=p>(</span><span class=n>NSString</span> <span class=o>*</span><span class=p>)</span><span class=nv>vShaderString</span> 
+            <span class=nf>fragmentShaderString:</span><span class=p>(</span><span class=n>NSString</span> <span class=o>*</span><span class=p>)</span><span class=nv>fShaderString</span><span class=p>;</span>
+<span class=c1>// 传入顶点着色器和片段着色器文件名
+</span><span class=c1></span><span class=p>-</span> <span class=p>(</span><span class=kt>id</span><span class=p>)</span><span class=nf>initWithVertexShaderString:</span><span class=p>(</span><span class=n>NSString</span> <span class=o>*</span><span class=p>)</span><span class=nv>vShaderString</span> 
+          <span class=nf>fragmentShaderFilename:</span><span class=p>(</span><span class=n>NSString</span> <span class=o>*</span><span class=p>)</span><span class=nv>fShaderFilename</span><span class=p>;</span>
+<span class=c1>// 传入顶点着色器文件名和片段着色器文件名
+</span><span class=c1></span><span class=p>-</span> <span class=p>(</span><span class=kt>id</span><span class=p>)</span><span class=nf>initWithVertexShaderFilename:</span><span class=p>(</span><span class=n>NSString</span> <span class=o>*</span><span class=p>)</span><span class=nv>vShaderFilename</span> 
+            <span class=nf>fragmentShaderFilename:</span><span class=p>(</span><span class=n>NSString</span> <span class=o>*</span><span class=p>)</span><span class=nv>fShaderFilename</span><span class=p>;</span>
+  
+<span class=c1>// GLProgram.m 
+</span><span class=c1>// 初始化着色器
+</span><span class=c1></span><span class=p>-</span> <span class=p>(</span><span class=kt>id</span><span class=p>)</span><span class=nf>initWithVertexShaderString:</span><span class=p>(</span><span class=n>NSString</span> <span class=o>*</span><span class=p>)</span><span class=nv>vShaderString</span> 
+            <span class=nf>fragmentShaderString:</span><span class=p>(</span><span class=n>NSString</span> <span class=o>*</span><span class=p>)</span><span class=nv>fShaderString</span><span class=p>;</span>
+<span class=p>{</span>
+    <span class=k>if</span> <span class=p>((</span><span class=nb>self</span> <span class=o>=</span> <span class=p>[</span><span class=nb>super</span> <span class=n>init</span><span class=p>]))</span> 
+    <span class=p>{</span>
+        <span class=n>_initialized</span> <span class=o>=</span> <span class=nb>NO</span><span class=p>;</span>
+        <span class=c1>// 初始化attributes、uniforms数组
+</span><span class=c1></span>        <span class=n>attributes</span> <span class=o>=</span> <span class=p>[[</span><span class=n>NSMutableArray</span> <span class=n>alloc</span><span class=p>]</span> <span class=n>init</span><span class=p>];</span>
+        <span class=n>uniforms</span> <span class=o>=</span> <span class=p>[[</span><span class=n>NSMutableArray</span> <span class=n>alloc</span><span class=p>]</span> <span class=n>init</span><span class=p>];</span>
+          <span class=c1>// 创建着色器程序
+</span><span class=c1></span>        <span class=n>program</span> <span class=o>=</span> <span class=n>glCreateProgram</span><span class=p>();</span>
+        <span class=c1>// 编译顶点着色器
+</span><span class=c1></span>        <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=p>[</span><span class=nb>self</span> <span class=nl>compileShader</span><span class=p>:</span><span class=o>&amp;</span><span class=n>vertShader</span> 
+                            <span class=nl>type</span><span class=p>:</span><span class=n>GL_VERTEX_SHADER</span> 
+                          <span class=nl>string</span><span class=p>:</span><span class=n>vShaderString</span><span class=p>])</span>
+        <span class=p>{</span>
+            <span class=n>NSLog</span><span class=p>(</span><span class=s>@&#34;Failed to compile vertex shader&#34;</span><span class=p>);</span>
+        <span class=p>}</span>
+        <span class=c1>// 编译片段着色器
+</span><span class=c1></span>        <span class=c1>// Create and compile fragment shader
+</span><span class=c1></span>        <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=p>[</span><span class=nb>self</span> <span class=nl>compileShader</span><span class=p>:</span><span class=o>&amp;</span><span class=n>fragShader</span> 
+                            <span class=nl>type</span><span class=p>:</span><span class=n>GL_FRAGMENT_SHADER</span> 
+                          <span class=nl>string</span><span class=p>:</span><span class=n>fShaderString</span><span class=p>])</span>
+        <span class=p>{</span>
+            <span class=n>NSLog</span><span class=p>(</span><span class=s>@&#34;Failed to compile fragment shader&#34;</span><span class=p>);</span>
+        <span class=p>}</span>
+        <span class=c1>// 将顶点着色器和片段着色器附着到着色器程序
+</span><span class=c1></span>        <span class=n>glAttachShader</span><span class=p>(</span><span class=n>program</span><span class=p>,</span> <span class=n>vertShader</span><span class=p>);</span>
+        <span class=n>glAttachShader</span><span class=p>(</span><span class=n>program</span><span class=p>,</span> <span class=n>fragShader</span><span class=p>);</span>
+    <span class=p>}</span>
+      
+    <span class=k>return</span> <span class=nb>self</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div><p>整个初始化过程中，包含了着色器程序的创建，顶点着色器和片段着色器的创建、编译，以及附着</p></li><li><p>编译顶点着色器和片段着色器</p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=p>-</span> <span class=p>(</span><span class=kt>BOOL</span><span class=p>)</span><span class=nf>compileShader:</span><span class=p>(</span><span class=n>GLuint</span> <span class=o>*</span><span class=p>)</span><span class=nv>shader</span> 
+                 <span class=nf>type:</span><span class=p>(</span><span class=n>GLenum</span><span class=p>)</span><span class=nv>type</span> 
+               <span class=nf>string:</span><span class=p>(</span><span class=n>NSString</span> <span class=o>*</span><span class=p>)</span><span class=nv>shaderString</span>
+<span class=p>{</span>
+<span class=c1>//    CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
+</span><span class=c1></span>                   
+    <span class=c1>// 编译结果
+</span><span class=c1></span>    <span class=n>GLint</span> <span class=n>status</span><span class=p>;</span>
+    <span class=c1>// GLSL 源代码格式化
+</span><span class=c1></span>    <span class=k>const</span> <span class=n>GLchar</span> <span class=o>*</span><span class=n>source</span><span class=p>;</span>
+    <span class=n>source</span> <span class=o>=</span> <span class=p>(</span><span class=n>GLchar</span> <span class=o>*</span><span class=p>)[</span><span class=n>shaderString</span> <span class=n>UTF8String</span><span class=p>];</span>
+    <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=n>source</span><span class=p>)</span>
+    <span class=p>{</span>
+        <span class=n>NSLog</span><span class=p>(</span><span class=s>@&#34;Failed to load vertex shader&#34;</span><span class=p>);</span>
+        <span class=k>return</span> <span class=nb>NO</span><span class=p>;</span>
+    <span class=p>}</span>
+    <span class=c1>// 根据类型创建对应的着色器对象
+</span><span class=c1></span>    <span class=o>*</span><span class=n>shader</span> <span class=o>=</span> <span class=n>glCreateShader</span><span class=p>(</span><span class=n>type</span><span class=p>);</span>
+    <span class=c1>// 为着色器对象注入 GLSL 源代码
+</span><span class=c1></span>    <span class=n>glShaderSource</span><span class=p>(</span><span class=o>*</span><span class=n>shader</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>source</span><span class=p>,</span> <span class=nb>NULL</span><span class=p>);</span>
+    <span class=c1>// 编译着色器对象
+</span><span class=c1></span>    <span class=n>glCompileShader</span><span class=p>(</span><span class=o>*</span><span class=n>shader</span><span class=p>);</span>
+    <span class=c1>// 获取编译结果
+</span><span class=c1></span>    <span class=n>glGetShaderiv</span><span class=p>(</span><span class=o>*</span><span class=n>shader</span><span class=p>,</span> <span class=n>GL_COMPILE_STATUS</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>status</span><span class=p>);</span>
+  
+    <span class=k>if</span> <span class=p>(</span><span class=n>status</span> <span class=o>!=</span> <span class=n>GL_TRUE</span><span class=p>)</span>
+    <span class=p>{</span>
+      <span class=c1>// 如果编译失败，打印失败原因
+</span><span class=c1></span>      <span class=n>GLint</span> <span class=n>logLength</span><span class=p>;</span>
+      <span class=n>glGetShaderiv</span><span class=p>(</span><span class=o>*</span><span class=n>shader</span><span class=p>,</span> <span class=n>GL_INFO_LOG_LENGTH</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>logLength</span><span class=p>);</span>
+      <span class=k>if</span> <span class=p>(</span><span class=n>logLength</span> <span class=o>&gt;</span> <span class=mi>0</span><span class=p>)</span>
+      <span class=p>{</span>
+        <span class=n>GLchar</span> <span class=o>*</span><span class=n>log</span> <span class=o>=</span> <span class=p>(</span><span class=n>GLchar</span> <span class=o>*</span><span class=p>)</span><span class=n>malloc</span><span class=p>(</span><span class=n>logLength</span><span class=p>);</span>
+        <span class=n>glGetShaderInfoLog</span><span class=p>(</span><span class=o>*</span><span class=n>shader</span><span class=p>,</span> <span class=n>logLength</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>logLength</span><span class=p>,</span> <span class=n>log</span><span class=p>);</span>
+              <span class=k>if</span> <span class=p>(</span><span class=n>shader</span> <span class=o>==</span> <span class=o>&amp;</span><span class=n>vertShader</span><span class=p>)</span>
+              <span class=p>{</span>
+                  <span class=nb>self</span><span class=p>.</span><span class=n>vertexShaderLog</span> <span class=o>=</span> <span class=p>[</span><span class=n>NSString</span> <span class=nl>stringWithFormat</span><span class=p>:</span><span class=s>@&#34;%s&#34;</span><span class=p>,</span> <span class=n>log</span><span class=p>];</span>
+              <span class=p>}</span>
+              <span class=k>else</span>
+              <span class=p>{</span>
+                  <span class=nb>self</span><span class=p>.</span><span class=n>fragmentShaderLog</span> <span class=o>=</span> <span class=p>[</span><span class=n>NSString</span> <span class=nl>stringWithFormat</span><span class=p>:</span><span class=s>@&#34;%s&#34;</span><span class=p>,</span> <span class=n>log</span><span class=p>];</span>
+              <span class=p>}</span>
+  
+        <span class=n>free</span><span class=p>(</span><span class=n>log</span><span class=p>);</span>
+      <span class=p>}</span>
+    <span class=p>}</span>	
+  	
+<span class=c1>//    CFAbsoluteTime linkTime = (CFAbsoluteTimeGetCurrent() - startTime);
+</span><span class=c1>//    NSLog(@&#34;Compiled in %f ms&#34;, linkTime * 1000.0);
+</span><span class=c1></span>  	
+    <span class=k>return</span> <span class=n>status</span> <span class=o>==</span> <span class=n>GL_TRUE</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div></li><li><p>链接</p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=p>-</span> <span class=p>(</span><span class=kt>BOOL</span><span class=p>)</span><span class=nf>link</span>
+<span class=p>{</span>
+<span class=c1>//    CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
+</span><span class=c1></span>      <span class=c1>// 链接结果
+</span><span class=c1></span>    <span class=n>GLint</span> <span class=n>status</span><span class=p>;</span>
+    <span class=c1>// 链接着色器程序
+</span><span class=c1></span>    <span class=n>glLinkProgram</span><span class=p>(</span><span class=n>program</span><span class=p>);</span>
+    <span class=c1>// 获取链接结果
+</span><span class=c1></span>    <span class=n>glGetProgramiv</span><span class=p>(</span><span class=n>program</span><span class=p>,</span> <span class=n>GL_LINK_STATUS</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>status</span><span class=p>);</span>
+    <span class=k>if</span> <span class=p>(</span><span class=n>status</span> <span class=o>==</span> <span class=n>GL_FALSE</span><span class=p>)</span>
+        <span class=k>return</span> <span class=nb>NO</span><span class=p>;</span>
+    <span class=c1>// 链接成功，删除相关的 shader，释放资源
+</span><span class=c1></span>    <span class=k>if</span> <span class=p>(</span><span class=n>vertShader</span><span class=p>)</span>
+    <span class=p>{</span>
+        <span class=n>glDeleteShader</span><span class=p>(</span><span class=n>vertShader</span><span class=p>);</span>
+        <span class=n>vertShader</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>
+    <span class=p>}</span>
+    <span class=k>if</span> <span class=p>(</span><span class=n>fragShader</span><span class=p>)</span>
+    <span class=p>{</span>
+        <span class=n>glDeleteShader</span><span class=p>(</span><span class=n>fragShader</span><span class=p>);</span>
+        <span class=n>fragShader</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>
+    <span class=p>}</span>
+    <span class=c1>// 初始化成功标识
+</span><span class=c1></span>    <span class=nb>self</span><span class=p>.</span><span class=n>initialized</span> <span class=o>=</span> <span class=nb>YES</span><span class=p>;</span>
+  
+<span class=c1>//    CFAbsoluteTime linkTime = (CFAbsoluteTimeGetCurrent() - startTime);
+</span><span class=c1>//    NSLog(@&#34;Linked in %f ms&#34;, linkTime * 1000.0);
+</span><span class=c1></span>  
+    <span class=k>return</span> <span class=nb>YES</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div></li><li><p>使用着色器</p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=p>-</span> <span class=p>(</span><span class=kt>void</span><span class=p>)</span><span class=nf>use</span>
+<span class=p>{</span>
+    <span class=n>glUseProgram</span><span class=p>(</span><span class=n>program</span><span class=p>);</span>
+<span class=p>}</span>
+</code></pre></div></li><li><p>向着色器传值</p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=p>-</span> <span class=p>(</span><span class=kt>void</span><span class=p>)</span><span class=nf>addAttribute:</span><span class=p>(</span><span class=n>NSString</span> <span class=o>*</span><span class=p>)</span><span class=nv>attributeName</span>
+<span class=p>{</span>
+    <span class=c1>// 先判断当前的属性是否已存在
+</span><span class=c1></span>    <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=p>[</span><span class=n>attributes</span> <span class=nl>containsObject</span><span class=p>:</span><span class=n>attributeName</span><span class=p>])</span>
+    <span class=p>{</span>
+        <span class=c1>// 如果不存在先加入属性数组，然后绑定该属性的位置为在属性数组中的位置
+</span><span class=c1></span>        <span class=p>[</span><span class=n>attributes</span> <span class=nl>addObject</span><span class=p>:</span><span class=n>attributeName</span><span class=p>];</span>
+        <span class=n>glBindAttribLocation</span><span class=p>(</span><span class=n>program</span><span class=p>,</span> 
+                             <span class=p>(</span><span class=n>GLuint</span><span class=p>)[</span><span class=n>attributes</span> <span class=nl>indexOfObject</span><span class=p>:</span><span class=n>attributeName</span><span class=p>],</span>
+                             <span class=p>[</span><span class=n>attributeName</span> <span class=n>UTF8String</span><span class=p>]);</span>
+    <span class=p>}</span>
+<span class=p>}</span>
+  
+<span class=p>-</span> <span class=p>(</span><span class=n>GLuint</span><span class=p>)</span><span class=nf>attributeIndex:</span><span class=p>(</span><span class=n>NSString</span> <span class=o>*</span><span class=p>)</span><span class=nv>attributeName</span>
+<span class=p>{</span>
+    <span class=c1>// 获取着色器属性变量的位置，即在数组的位置（根据之前的绑定关系）
+</span><span class=c1></span>    <span class=k>return</span> <span class=p>(</span><span class=n>GLuint</span><span class=p>)[</span><span class=n>attributes</span> <span class=nl>indexOfObject</span><span class=p>:</span><span class=n>attributeName</span><span class=p>];</span>
+<span class=p>}</span>
+  
+<span class=p>-</span> <span class=p>(</span><span class=n>GLuint</span><span class=p>)</span><span class=nf>uniformIndex:</span><span class=p>(</span><span class=n>NSString</span> <span class=o>*</span><span class=p>)</span><span class=nv>uniformName</span>
+<span class=p>{</span>
+    <span class=c1>// 获取Uniform变量的位置
+</span><span class=c1></span>    <span class=k>return</span> <span class=n>glGetUniformLocation</span><span class=p>(</span><span class=n>program</span><span class=p>,</span> <span class=p>[</span><span class=n>uniformName</span> <span class=n>UTF8String</span><span class=p>]);</span>
+<span class=p>}</span>
+</code></pre></div></li></ul><h4 id=gpuimagecontext><a href=#gpuimagecontext class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a><code>GPUImageContext</code></h4><p><code>GPUImageContext</code>类，提供 OpenGL ES 基本上下文，GPUImage 相关处理线程，GLProgram 缓存、帧缓存。</p><p>由于是上下文对象，因此该类提供的更多是存取、设置相关的方法。</p><ul><li><p>属性</p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=c1>// GPUImage处理OpenGL绘制的相关队列，串行队列
+</span><span class=c1></span><span class=k>@property</span><span class=p>(</span><span class=k>readonly</span><span class=p>,</span> <span class=k>nonatomic</span><span class=p>)</span> <span class=n>dispatch_queue_t</span> <span class=n>contextQueue</span><span class=p>;</span>
+<span class=c1>// 当前使用的着色器程序
+</span><span class=c1></span><span class=k>@property</span><span class=p>(</span><span class=k>readwrite</span><span class=p>,</span> <span class=k>retain</span><span class=p>,</span> <span class=k>nonatomic</span><span class=p>)</span> <span class=n>GLProgram</span> <span class=o>*</span><span class=n>currentShaderProgram</span><span class=p>;</span>
+<span class=c1>// OpenGLES上下文对象
+</span><span class=c1></span><span class=k>@property</span><span class=p>(</span><span class=k>readonly</span><span class=p>,</span> <span class=k>retain</span><span class=p>,</span> <span class=k>nonatomic</span><span class=p>)</span> <span class=n>EAGLContext</span> <span class=o>*</span><span class=n>context</span><span class=p>;</span>
+<span class=c1>// CoreVideo中的纹理缓存
+</span><span class=c1></span><span class=k>@property</span><span class=p>(</span><span class=k>readonly</span><span class=p>)</span> <span class=n>CVOpenGLESTextureCacheRef</span> <span class=n>coreVideoTextureCache</span><span class=p>;</span>
+<span class=c1>// 帧缓存
+</span><span class=c1></span><span class=k>@property</span><span class=p>(</span><span class=k>readonly</span><span class=p>)</span> <span class=n>GPUImageFramebufferCache</span> <span class=o>*</span><span class=n>framebufferCache</span><span class=p>;</span>
+</code></pre></div></li><li><p>初始化，<code>dispatch_queue_set_specific</code>是为队列设置标识，其主要目的是为了避免死锁的产生</p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=p>-</span> <span class=p>(</span><span class=kt>id</span><span class=p>)</span><span class=nf>init</span><span class=p>;</span>
+<span class=p>{</span>
+    <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=p>(</span><span class=nb>self</span> <span class=o>=</span> <span class=p>[</span><span class=nb>super</span> <span class=n>init</span><span class=p>]))</span>
+    <span class=p>{</span>
+        <span class=k>return</span> <span class=nb>nil</span><span class=p>;</span>
+    <span class=p>}</span>
+      
+    <span class=c1>// 创建OpenGL渲染队列
+</span><span class=c1></span>    <span class=n>openGLESContextQueueKey</span> <span class=o>=</span> <span class=o>&amp;</span><span class=n>openGLESContextQueueKey</span><span class=p>;</span>
+    <span class=n>_contextQueue</span> <span class=o>=</span> <span class=n>dispatch_queue_create</span><span class=p>(</span><span class=s>&#34;com.sunsetlakesoftware.GPUImage.openGLESContextQueue&#34;</span><span class=p>,</span> <span class=n>GPUImageDefaultQueueAttribute</span><span class=p>());</span>
+      
+<span class=cp>#if OS_OBJECT_USE_OBJC
+</span><span class=cp></span>    <span class=c1>// 设置队列标识
+</span><span class=c1></span>    <span class=n>dispatch_queue_set_specific</span><span class=p>(</span><span class=n>_contextQueue</span><span class=p>,</span> <span class=n>openGLESContextQueueKey</span><span class=p>,</span> <span class=p>(</span><span class=k>__bridge</span> <span class=kt>void</span> <span class=o>*</span><span class=p>)</span><span class=nb>self</span><span class=p>,</span> <span class=nb>NULL</span><span class=p>);</span>
+<span class=cp>#endif
+</span><span class=cp></span>    <span class=c1>// 初始化着色器缓存相关数组
+</span><span class=c1></span>    <span class=n>shaderProgramCache</span> <span class=o>=</span> <span class=p>[[</span><span class=n>NSMutableDictionary</span> <span class=n>alloc</span><span class=p>]</span> <span class=n>init</span><span class=p>];</span>
+    <span class=n>shaderProgramUsageHistory</span> <span class=o>=</span> <span class=p>[[</span><span class=n>NSMutableArray</span> <span class=n>alloc</span><span class=p>]</span> <span class=n>init</span><span class=p>];</span>
+      
+    <span class=k>return</span> <span class=nb>self</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div></li><li><p>方法</p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=c1>// 获取队列标识
+</span><span class=c1></span><span class=p>+</span> <span class=p>(</span><span class=kt>void</span> <span class=o>*</span><span class=p>)</span><span class=nf>contextKey</span><span class=p>;</span>
+<span class=c1>// 单例对象
+</span><span class=c1></span><span class=p>+</span> <span class=p>(</span><span class=n>GPUImageContext</span> <span class=o>*</span><span class=p>)</span><span class=nf>sharedImageProcessingContext</span><span class=p>;</span>
+<span class=c1>// 获取处理队列
+</span><span class=c1></span><span class=p>+</span> <span class=p>(</span><span class=n>dispatch_queue_t</span><span class=p>)</span><span class=nf>sharedContextQueue</span><span class=p>;</span>
+<span class=c1>// 帧缓存
+</span><span class=c1></span><span class=p>+</span> <span class=p>(</span><span class=n>GPUImageFramebufferCache</span> <span class=o>*</span><span class=p>)</span><span class=nf>sharedFramebufferCache</span><span class=p>;</span>
+<span class=c1>// 设置当前上下文
+</span><span class=c1></span><span class=p>+</span> <span class=p>(</span><span class=kt>void</span><span class=p>)</span><span class=nf>useImageProcessingContext</span><span class=p>;</span>
+<span class=p>-</span> <span class=p>(</span><span class=kt>void</span><span class=p>)</span><span class=nf>useAsCurrentContext</span><span class=p>;</span>
+<span class=c1>// 设置当前的GL程序
+</span><span class=c1></span><span class=p>+</span> <span class=p>(</span><span class=kt>void</span><span class=p>)</span><span class=nf>setActiveShaderProgram:</span><span class=p>(</span><span class=n>GLProgram</span> <span class=o>*</span><span class=p>)</span><span class=nv>shaderProgram</span><span class=p>;</span>
+<span class=p>-</span> <span class=p>(</span><span class=kt>void</span><span class=p>)</span><span class=nf>setContextShaderProgram:</span><span class=p>(</span><span class=n>GLProgram</span> <span class=o>*</span><span class=p>)</span><span class=nv>shaderProgram</span><span class=p>;</span>
+<span class=c1>// 获取设备OpenGLES相关特性的支持情况
+</span><span class=c1></span><span class=p>+</span> <span class=p>(</span><span class=n>GLint</span><span class=p>)</span><span class=nf>maximumTextureSizeForThisDevice</span><span class=p>;</span>
+<span class=p>+</span> <span class=p>(</span><span class=n>GLint</span><span class=p>)</span><span class=nf>maximumTextureUnitsForThisDevice</span><span class=p>;</span>
+<span class=p>+</span> <span class=p>(</span><span class=n>GLint</span><span class=p>)</span><span class=nf>maximumVaryingVectorsForThisDevice</span><span class=p>;</span>
+<span class=p>+</span> <span class=p>(</span><span class=kt>BOOL</span><span class=p>)</span><span class=nf>deviceSupportsOpenGLESExtension:</span><span class=p>(</span><span class=n>NSString</span> <span class=o>*</span><span class=p>)</span><span class=nv>extension</span><span class=p>;</span>
+<span class=p>+</span> <span class=p>(</span><span class=kt>BOOL</span><span class=p>)</span><span class=nf>deviceSupportsRedTextures</span><span class=p>;</span>
+<span class=p>+</span> <span class=p>(</span><span class=kt>BOOL</span><span class=p>)</span><span class=nf>deviceSupportsFramebufferReads</span><span class=p>;</span>
+<span class=c1>// 纹理大小调整，保证纹理不超过OpenGLES支持最大的尺寸
+</span><span class=c1></span><span class=p>+</span> <span class=p>(</span><span class=n>CGSize</span><span class=p>)</span><span class=nf>sizeThatFitsWithinATextureForSize:</span><span class=p>(</span><span class=n>CGSize</span><span class=p>)</span><span class=nv>inputSize</span><span class=p>;</span>
+<span class=c1>// 将渲染缓存呈现在设备上
+</span><span class=c1></span><span class=p>-</span> <span class=p>(</span><span class=kt>void</span><span class=p>)</span><span class=nf>presentBufferForDisplay</span><span class=p>;</span>
+<span class=c1>// 创建GLProgram，首先在缓存中查找，如果没有则创建
+</span><span class=c1></span><span class=p>-</span> <span class=p>(</span><span class=n>GLProgram</span> <span class=o>*</span><span class=p>)</span><span class=nf>programForVertexShaderString:</span><span class=p>(</span><span class=n>NSString</span> <span class=o>*</span><span class=p>)</span><span class=nv>vertexShaderString</span> <span class=nf>fragmentShaderString:</span><span class=p>(</span><span class=n>NSString</span> <span class=o>*</span><span class=p>)</span><span class=nv>fragmentShaderString</span><span class=p>;</span>
+<span class=c1>// 创建Sharegroup
+</span><span class=c1></span><span class=p>-</span> <span class=p>(</span><span class=kt>void</span><span class=p>)</span><span class=nf>useSharegroup:</span><span class=p>(</span><span class=n>EAGLSharegroup</span> <span class=o>*</span><span class=p>)</span><span class=nv>sharegroup</span><span class=p>;</span>
+<span class=c1>// Manage fast texture upload
+</span><span class=c1></span><span class=p>+</span> <span class=p>(</span><span class=kt>BOOL</span><span class=p>)</span><span class=nf>supportsFastTextureUpload</span><span class=p>;</span>
+</code></pre></div></li></ul><p><code>GPUImageContext</code>可以理解为一个上下文对象，是管理渲染的状态机。</p><p>简单介绍几个方法：</p><ul><li><p>调整纹理大小，保证纹理不超过 OpenGL ES 支持最大的尺寸</p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=p>+</span> <span class=p>(</span><span class=n>CGSize</span><span class=p>)</span><span class=nf>sizeThatFitsWithinATextureForSize:</span><span class=p>(</span><span class=n>CGSize</span><span class=p>)</span><span class=nv>inputSize</span><span class=p>;</span>
+<span class=p>{</span>
+    <span class=n>GLint</span> <span class=n>maxTextureSize</span> <span class=o>=</span> <span class=p>[</span><span class=nb>self</span> <span class=n>maximumTextureSizeForThisDevice</span><span class=p>];</span> 
+    <span class=k>if</span> <span class=p>(</span> <span class=p>(</span><span class=n>inputSize</span><span class=p>.</span><span class=n>width</span> <span class=o>&lt;</span> <span class=n>maxTextureSize</span><span class=p>)</span> <span class=o>&amp;&amp;</span> <span class=p>(</span><span class=n>inputSize</span><span class=p>.</span><span class=n>height</span> <span class=o>&lt;</span> <span class=n>maxTextureSize</span><span class=p>)</span> <span class=p>)</span>
+    <span class=p>{</span>
+        <span class=k>return</span> <span class=n>inputSize</span><span class=p>;</span>
+    <span class=p>}</span>
+      
+    <span class=n>CGSize</span> <span class=n>adjustedSize</span><span class=p>;</span>
+    <span class=k>if</span> <span class=p>(</span><span class=n>inputSize</span><span class=p>.</span><span class=n>width</span> <span class=o>&gt;</span> <span class=n>inputSize</span><span class=p>.</span><span class=n>height</span><span class=p>)</span>
+    <span class=p>{</span>
+        <span class=n>adjustedSize</span><span class=p>.</span><span class=n>width</span> <span class=o>=</span> <span class=p>(</span><span class=n>CGFloat</span><span class=p>)</span><span class=n>maxTextureSize</span><span class=p>;</span>
+        <span class=n>adjustedSize</span><span class=p>.</span><span class=n>height</span> <span class=o>=</span> <span class=p>((</span><span class=n>CGFloat</span><span class=p>)</span><span class=n>maxTextureSize</span> <span class=o>/</span> <span class=n>inputSize</span><span class=p>.</span><span class=n>width</span><span class=p>)</span> <span class=o>*</span> <span class=n>inputSize</span><span class=p>.</span><span class=n>height</span><span class=p>;</span>
+    <span class=p>}</span>
+    <span class=k>else</span>
+    <span class=p>{</span>
+        <span class=n>adjustedSize</span><span class=p>.</span><span class=n>height</span> <span class=o>=</span> <span class=p>(</span><span class=n>CGFloat</span><span class=p>)</span><span class=n>maxTextureSize</span><span class=p>;</span>
+        <span class=n>adjustedSize</span><span class=p>.</span><span class=n>width</span> <span class=o>=</span> <span class=p>((</span><span class=n>CGFloat</span><span class=p>)</span><span class=n>maxTextureSize</span> <span class=o>/</span> <span class=n>inputSize</span><span class=p>.</span><span class=n>height</span><span class=p>)</span> <span class=o>*</span> <span class=n>inputSize</span><span class=p>.</span><span class=n>width</span><span class=p>;</span>
+    <span class=p>}</span>
+  
+    <span class=k>return</span> <span class=n>adjustedSize</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div></li><li><p>获取 OpenGL ES 支持的最大纹理尺寸</p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=p>+</span> <span class=p>(</span><span class=n>GLint</span><span class=p>)</span><span class=nf>maximumTextureSizeForThisDevice</span><span class=p>;</span>
+<span class=p>{</span>
+    <span class=k>static</span> <span class=n>dispatch_once_t</span> <span class=n>pred</span><span class=p>;</span>
+    <span class=k>static</span> <span class=n>GLint</span> <span class=n>maxTextureSize</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>
+      
+    <span class=n>dispatch_once</span><span class=p>(</span><span class=o>&amp;</span><span class=n>pred</span><span class=p>,</span> <span class=o>^</span><span class=p>{</span>
+        <span class=p>[</span><span class=nb>self</span> <span class=n>useImageProcessingContext</span><span class=p>];</span>
+        <span class=n>glGetIntegerv</span><span class=p>(</span><span class=n>GL_MAX_TEXTURE_SIZE</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>maxTextureSize</span><span class=p>);</span>
+    <span class=p>});</span>
+  
+    <span class=k>return</span> <span class=n>maxTextureSize</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div></li><li><p>创建 <code>GLProgram</code>，首先在缓存中查找，如果没有则创建</p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=p>-</span> <span class=p>(</span><span class=n>GLProgram</span> <span class=o>*</span><span class=p>)</span><span class=nf>programForVertexShaderString:</span><span class=p>(</span><span class=n>NSString</span> <span class=o>*</span><span class=p>)</span><span class=nv>vertexShaderString</span> <span class=nf>fragmentShaderString:</span><span class=p>(</span><span class=n>NSString</span> <span class=o>*</span><span class=p>)</span><span class=nv>fragmentShaderString</span><span class=p>;</span>
+<span class=p>{</span>
+    <span class=n>NSString</span> <span class=o>*</span><span class=n>lookupKeyForShaderProgram</span> <span class=o>=</span> <span class=p>[</span><span class=n>NSString</span> <span class=nl>stringWithFormat</span><span class=p>:</span><span class=s>@&#34;V: %@ - F: %@&#34;</span><span class=p>,</span> <span class=n>vertexShaderString</span><span class=p>,</span> <span class=n>fragmentShaderString</span><span class=p>];</span>
+    <span class=n>GLProgram</span> <span class=o>*</span><span class=n>programFromCache</span> <span class=o>=</span> <span class=p>[</span><span class=n>shaderProgramCache</span> <span class=nl>objectForKey</span><span class=p>:</span><span class=n>lookupKeyForShaderProgram</span><span class=p>];</span>
+  
+    <span class=k>if</span> <span class=p>(</span><span class=n>programFromCache</span> <span class=o>==</span> <span class=nb>nil</span><span class=p>)</span>
+    <span class=p>{</span>
+        <span class=n>programFromCache</span> <span class=o>=</span> <span class=p>[[</span><span class=n>GLProgram</span> <span class=n>alloc</span><span class=p>]</span> <span class=nl>initWithVertexShaderString</span><span class=p>:</span><span class=n>vertexShaderString</span> <span class=nl>fragmentShaderString</span><span class=p>:</span><span class=n>fragmentShaderString</span><span class=p>];</span>
+        <span class=p>[</span><span class=n>shaderProgramCache</span> <span class=nl>setObject</span><span class=p>:</span><span class=n>programFromCache</span> <span class=nl>forKey</span><span class=p>:</span><span class=n>lookupKeyForShaderProgram</span><span class=p>];</span>
+<span class=c1>//        [shaderProgramUsageHistory addObject:lookupKeyForShaderProgram];
+</span><span class=c1>//        if ([shaderProgramUsageHistory count] &gt;= MAXSHADERPROGRAMSALLOWEDINCACHE)
+</span><span class=c1>//        {
+</span><span class=c1>//            for (NSUInteger currentShaderProgramRemovedFromCache = 0; currentShaderProgramRemovedFromCache &lt; 10; currentShaderProgramRemovedFromCache++)
+</span><span class=c1>//            {
+</span><span class=c1>//                NSString *shaderProgramToRemoveFromCache = [shaderProgramUsageHistory objectAtIndex:0];
+</span><span class=c1>//                [shaderProgramUsageHistory removeObjectAtIndex:0];
+</span><span class=c1>//                [shaderProgramCache removeObjectForKey:shaderProgramToRemoveFromCache];
+</span><span class=c1>//            }
+</span><span class=c1>//        }
+</span><span class=c1></span>    <span class=p>}</span>
+      
+    <span class=k>return</span> <span class=n>programFromCache</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div></li></ul><h4 id=总结><a href=#总结 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>总结</h4><p><code>GLProgram</code>是自定义着色器程序有着非常紧密的关系，其中包括着色器程序的创建、编译、链接、使用等过程。</p><p><code>GPUImageContext</code>是 GPUImage 的上下文对象，管理着 OpenGL ES 上下文对象，管理着色器程序，帧缓存等操作。</p></div></article><div class=post-tags><a href=../tags/gpuimage/ rel=tag class=post-tags-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon tag-icon"><path d="M0 252.118V48C0 21.49 21.49.0 48 0h204.118a48 48 0 0133.941 14.059l211.882 211.882c18.745 18.745 18.745 49.137.0 67.882L293.823 497.941c-18.745 18.745-49.137 18.745-67.882.0L14.059 286.059A48 48 0 010 252.118zM112 64c-26.51.0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48z"/></svg>GPUImage</a>
+<a href=../tags/ios/ rel=tag class=post-tags-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon tag-icon"><path d="M0 252.118V48C0 21.49 21.49.0 48 0h204.118a48 48 0 0133.941 14.059l211.882 211.882c18.745 18.745 18.745 49.137.0 67.882L293.823 497.941c-18.745 18.745-49.137 18.745-67.882.0L14.059 286.059A48 48 0 010 252.118zM112 64c-26.51.0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48z"/></svg>iOS</a></div></div></main><div id=back-to-top class=back-to-top><a href=#><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="icon arrow-up"><path d="M34.9 289.5l-22.2-22.2c-9.4-9.4-9.4-24.6.0-33.9L207 39c9.4-9.4 24.6-9.4 33.9.0l194.3 194.3c9.4 9.4 9.4 24.6.0 33.9L413 289.4c-9.5 9.5-25 9.3-34.3-.4L264 168.6V456c0 13.3-10.7 24-24 24h-32c-13.3.0-24-10.7-24-24V168.6L69.2 289.1c-9.3 9.8-24.8 10-34.3.4z"/></svg></a></div><footer id=footer class=footer><div class=footer-inner><div class=site-info>©&nbsp;2019–2021&nbsp;<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon footer-icon"><path d="M462.3 62.6C407.5 15.9 326 24.3 275.7 76.2L256 96.5l-19.7-20.3C186.1 24.3 104.5 15.9 49.7 62.6c-62.8 53.6-66.1 149.8-9.9 207.9l193.5 199.8c12.5 12.9 32.8 12.9 45.3.0l193.5-199.8c56.3-58.1 53-154.3-9.8-207.9z"/></svg>&nbsp;Dev - jw</div></div></footer></div><script>'serviceWorker'in navigator&&window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js')})</script><script>typeof MathJax=='undefined'?(window.MathJax={loader:{load:['[tex]/mhchem']},options:{renderActions:{addMenu:[0,'','']}},tex:{inlineMath:{'[+]':[['$','$']]},tags:'ams',packages:{'[+]':['mhchem']}}},function(){var a=document.createElement('script');a.src='https://cdn.jsdelivr.net/npm/mathjax@3.1.2/es5/tex-mml-chtml.js',a.defer=!0,document.head.appendChild(a)}()):(MathJax.texReset(),MathJax.typeset())</script><script src=https://cdn.jsdelivr.net/npm/mermaid@8.8.3/dist/mermaid.min.js></script><script>let mermaidConfig={startOnLoad:!0,flowchart:{useMaxWidth:!1,htmlLabels:!0},theme:'default'};mermaid.initialize(mermaidConfig)</script><script src=https://cdn.jsdelivr.net/npm/medium-zoom@latest/dist/medium-zoom.min.js></script><script>mediumZoom(document.querySelectorAll('div.post-body img'),{background:'hsla(var(--color-bg-h), var(--color-bg-s), var(--color-bg-l), 0.95)'})</script><script src=https://cdn.jsdelivr.net/npm/instant.page@5.1.0/instantpage.min.js type=module defer></script></body></html>

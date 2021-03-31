@@ -1,0 +1,264 @@
+<!doctype html><html lang=zh-cn><head prefix="og: http://ogp.me/ns# article: http://ogp.me/ns/article#"><meta charset=utf-8><meta name=generator content="Hugo 0.82.0"><meta name=theme-color content="#fff"><meta name=viewport content="width=device-width,initial-scale=1"><meta name=format-detection content="telephone=no, date=no, address=no, email=no"><meta http-equiv=cache-control content="no-transform"><meta http-equiv=cache-control content="no-siteapp"><title>iOS底层原理探索-类的结构分析 | Dev - jw</title><link rel=stylesheet href=../css/meme.min.ae509b8259cb6c090411be6371211f6bb00631055ec9b68a994f27bb5f5f5f76.css><script src=../js/meme.min.3a56ecbb4ec7b23a805fc0116d4dac9095813dfd877cd8379675a8bdac538ffe.js></script><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400;1,700&family=Noto+Serif+SC:wght@400;500;700&family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap" media=print onload="this.media='all'"><noscript><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400;1,700&family=Noto+Serif+SC:wght@400;500;700&family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap"></noscript><meta name=author content="Dev - jw"><meta name=description content="在『iOS底层原理探索-isa结构&指向分析』中，我们已经知道： 本文将对类的……"><link rel="shortcut icon" href=../favicon.ico type=image/x-icon><link rel=mask-icon href=../icons/safari-pinned-tab.svg color=#2a6df4><link rel=apple-touch-icon sizes=180x180 href=../icons/apple-touch-icon.png><meta name=apple-mobile-web-app-capable content="yes"><meta name=apple-mobile-web-app-title content="Dev - jw"><meta name=apple-mobile-web-app-status-bar-style content="black"><meta name=mobile-web-app-capable content="yes"><meta name=application-name content="Dev - jw"><meta name=msapplication-starturl content="../"><meta name=msapplication-TileColor content="#fff"><meta name=msapplication-TileImage content="../icons/mstile-150x150.png"><link rel=manifest href=../manifest.json><link rel=canonical href=https://dev.hjw.best/Class-structure/><script type=application/ld+json>{"@context":"https://schema.org","@type":"WebPage","datePublished":"2020-09-14T16:28:45+08:00","dateModified":"2021-03-31T15:42:56+08:00","url":"https://dev.hjw.best/Class-structure/","name":"iOS底层原理探索-类的结构分析","description":"在『iOS底层原理探索-isa结构\u0026指向分析』中，我们已经知道： 本文将对类的……","image":"https://dev.hjw.best/favicon.ico","license":"Copyright","publisher":{"@type":"Organization","name":"Dev - jw","logo":{"@type":"ImageObject","url":"https://dev.hjw.best/favicon.ico"},"url":"https://dev.hjw.best/"},"mainEntityOfPage":{"@type":"WebSite","@id":"https://dev.hjw.best/"}}</script><meta name=twitter:card content="summary"><meta property="og:title" content="iOS底层原理探索-类的结构分析"><meta property="og:description" content="在『iOS底层原理探索-isa结构&指向分析』中，我们已经知道： 本文将对类的……"><meta property="og:url" content="https://dev.hjw.best/Class-structure/"><meta property="og:site_name" content="Dev - jw"><meta property="og:locale" content="zh"><meta property="og:image" content="https://dev.hjw.best/favicon.ico"><meta property="og:type" content="website"><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=Lato:wght@700&text=reuixiy&display=swap" media=print onload="this.media='all'"><noscript><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=Lato:wght@700&text=reuixiy&display=swap"></noscript><meta name=baidu-site-verification content="5nzYjT6RG7"></head><body><div class=container><header class=header><div class=header-wrapper><div class="header-inner single"><div class=site-brand><a href=../ class=brand>Dev - jw</a></div><nav class=nav><ul class=menu id=menu><li class=menu-item><a href=../about><span class=menu-item-name>关于</span></a></li><li class=menu-item><a id=theme-switcher href=#><span class="icon theme-icon-light">🌞</span><span class="icon theme-icon-dark">🌙</span></a></li></ul></nav></div></div><input type=checkbox id=nav-toggle aria-hidden=true>
+<label for=nav-toggle class=nav-toggle></label><label for=nav-toggle class=nav-curtain></label></header><main class="main single" id=main><div class=main-inner><article class="content post h-entry" data-align=default data-type=posts data-toc-num=true><h1 class="post-title p-name">iOS底层原理探索-类的结构分析</h1><div class=post-meta><time datetime=2020-09-14T16:28:45+08:00 class="post-meta-item published dt-published"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="icon post-meta-icon"><path d="M148 288h-40c-6.6.0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v40c0 6.6-5.4 12-12 12zm108-12v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm96 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm-96 96v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm-96 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm192 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm96-260v352c0 26.5-21.5 48-48 48H48c-26.5.0-48-21.5-48-48V112c0-26.5 21.5-48 48-48h48V12c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v52h128V12c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v52h48c26.5.0 48 21.5 48 48zm-48 346V160H48v298c0 3.3 2.7 6 6 6h340c3.3.0 6-2.7 6-6z"/></svg>&nbsp;2020-09-14</time></div><div class="post-body e-content"><p>在『<a href=../isa>iOS底层原理探索-isa结构&指向分析</a>』中，我们已经知道：</p><p>本文将对类的结构进一步的分析，同样的，先提出几个问题：</p><ul><li><code>objc_class</code> 与 <code>objc_object</code> 有什么关系？</li><li>成员变量和属性有什么区别？</li><li>实例方法与类方法的归属问题？</li></ul><h3 id=类的本质><a href=#类的本质 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>类的本质</h3><p><strong>类的本质是 objc_class 类型的结构体，objc_class 继承与 objc_object</strong></p><p>我们再来看一下：<strong>NSObject的定义</strong></p><div class=highlight><pre class=chroma><code class=language-Objective-C data-lang=Objective-C><span class=k>typedef</span> <span class=k>struct</span> <span class=n>objc_class</span> <span class=o>*</span><span class=kt>Class</span><span class=p>;</span>
+<span class=k>typedef</span> <span class=k>struct</span> <span class=n>objc_object</span> <span class=o>*</span><span class=kt>id</span><span class=p>;</span>
+
+<span class=k>@interface</span> <span class=nc>NSObject</span> <span class=o>&lt;</span><span class=n>NSObject</span><span class=o>&gt;</span> <span class=p>{</span>
+    <span class=kt>Class</span> <span class=n>isa</span>  <span class=n>OBJC_ISA_AVAILABILITY</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div><p><code>objc_class</code>的定义</p><div class=highlight><pre class=chroma><code class=language-objc data-lang=objc><span class=k>struct</span> <span class=nl>objc_class</span> <span class=p>:</span> <span class=n>objc_object</span> <span class=p>{</span>
+    <span class=c1>// Class ISA;
+</span><span class=c1></span>    <span class=kt>Class</span> <span class=n>superclass</span><span class=p>;</span>
+    <span class=n>cache_t</span> <span class=n>cache</span><span class=p>;</span>             <span class=c1>// formerly cache pointer and vtable
+</span><span class=c1></span>    <span class=n>class_data_bits_t</span> <span class=n>bits</span><span class=p>;</span>    <span class=c1>// class_rw_t * plus custom rr/alloc flags
+</span><span class=c1></span>  	
+    <span class=n>class_rw_t</span> <span class=o>*</span><span class=nf>data</span><span class=p>()</span> <span class=k>const</span> <span class=p>{</span>
+        <span class=k>return</span> <span class=n>bits</span><span class=p>.</span><span class=n>data</span><span class=p>();</span>
+    <span class=p>}</span>
+    <span class=p>...</span>
+<span class=p>};</span>
+</code></pre></div><p><code>objc_object</code>的定义</p><div class=highlight><pre class=chroma><code class=language-objc data-lang=objc><span class=k>struct</span> <span class=n>objc_object</span> <span class=p>{</span>
+  <span class=nl>private</span><span class=p>:</span>
+      <span class=n>isa_t</span> <span class=n>isa</span><span class=p>;</span>
+  <span class=p>}</span>
+<span class=p>}</span>
+</code></pre></div><p>仔细比较 <code>NSObject</code> 和 <code>objc_object</code>，两者非常的相似，可以总结为：</p><ul><li><code>NSObject</code>是 <code>objc_object</code> 的仿写，和 <code>objc_object</code>定义是一样的，在底层会被编译成 <code>objc_object</code></li><li>所以，<code>NSObject类</code>是 Objective-C 的 <code>objc_object</code></li></ul><h3 id=类的结构><a href=#类的结构 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>类的结构</h3><p>从 <code>objc_class</code> 中定义，结构体有 4 个成员变量：<code>isa、superclass、cache、bits</code></p><p><strong>Class ISA</strong></p><p>这是继承于 <code>objc_object</code> 而来的，指向的是当前的类，占 8 字节</p><p><strong>Class superclass</strong></p><p>父类，superclass是 <code>Class</code> 类型，占 8 字节</p><p><strong>cache_t cache</strong></p><p><code>cache_t</code>的定义</p><div class=highlight><pre class=chroma><code class=language-C++ data-lang=C++><span class=k>struct</span> <span class=nc>cache_t</span> <span class=p>{</span>
+<span class=cp>#if CACHE_MASK_STORAGE == CACHE_MASK_STORAGE_OUTLINED
+</span><span class=cp></span>    <span class=n>explicit_atomic</span><span class=o>&lt;</span><span class=k>struct</span> <span class=nc>bucket_t</span> <span class=o>*&gt;</span> <span class=n>_buckets</span><span class=p>;</span>
+    <span class=n>explicit_atomic</span><span class=o>&lt;</span><span class=n>mask_t</span><span class=o>&gt;</span> <span class=n>_mask</span><span class=p>;</span>
+<span class=cp>#elif CACHE_MASK_STORAGE == CACHE_MASK_STORAGE_HIGH_16
+</span><span class=cp></span>    <span class=n>explicit_atomic</span><span class=o>&lt;</span><span class=n>uintptr_t</span><span class=o>&gt;</span> <span class=n>_maskAndBuckets</span><span class=p>;</span>
+    <span class=n>mask_t</span> <span class=n>_mask_unused</span><span class=p>;</span>
+    
+<span class=cp>#if __LP64__
+</span><span class=cp></span>    <span class=kt>uint16_t</span> <span class=n>_flags</span><span class=p>;</span>
+<span class=cp>#endif
+</span><span class=cp></span>    <span class=kt>uint16_t</span> <span class=n>_occupied</span><span class=p>;</span>
+</code></pre></div><p>正如所见的，cache_t 是一个结构体，内存长度由所有元素决定：</p><ul><li><code>_buckets</code> | <code>_maskAndBuckets</code>：<code>bucket_t*</code>是结构体指针，<code>uintptr_t</code>也是指针，8 字节</li><li><code>_mask</code> | <code>_mask_unused</code>：<code>mask_t</code>是 <code>int</code> 类型，占 4 个字节</li><li><code>_flags</code>：<code>uint16_t</code>类型，uint16_t是 <code>unsigned short</code> 的别名，占 2个字节</li><li><code>_occupied</code>：<code>uint16_t</code>类型，uint16_t是 <code>unsigned short</code> 的别名，占 2个字节</li></ul><p>因此，<code>cache_t</code> 占用 16 字节</p><blockquote><p>关于 <code>cache_t</code>会在后续进行详细展开说明</p></blockquote><p><strong>class_data_bits_t bits</strong></p><p><code>class_data_bits_t</code>的定义</p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=k>struct</span> <span class=n>class_data_bits_t</span> <span class=p>{</span>
+    <span class=n>friend</span> <span class=n>objc_class</span><span class=p>;</span>
+  
+    <span class=c1>// Values are the FAST_ flags above.
+</span><span class=c1></span>    <span class=n>uintptr_t</span> <span class=n>bits</span><span class=p>;</span>
+<span class=nl>private</span><span class=p>:</span>
+  <span class=kt>bool</span> <span class=n>getBit</span><span class=p>(</span><span class=n>uintptr_t</span> <span class=n>bit</span><span class=p>)</span> <span class=k>const</span>
+  <span class=p>{</span>
+      <span class=k>return</span> <span class=n>bits</span> <span class=o>&amp;</span> <span class=n>bit</span><span class=p>;</span>
+  <span class=p>}</span>
+  <span class=p>...</span>
+<span class=nl>public</span><span class=p>:</span>
+
+  <span class=n>class_rw_t</span><span class=o>*</span> <span class=n>data</span><span class=p>()</span> <span class=k>const</span> <span class=p>{</span>
+      <span class=k>return</span> <span class=p>(</span><span class=n>class_rw_t</span> <span class=o>*</span><span class=p>)(</span><span class=n>bits</span> <span class=o>&amp;</span> <span class=n>FAST_DATA_MASK</span><span class=p>);</span>
+  <span class=p>}</span>
+  <span class=p>...</span>
+<span class=p>}</span>
+</code></pre></div><p><code>class_rw_t</code>的定义</p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=k>struct</span> <span class=n>class_rw_t</span> <span class=p>{</span>
+    <span class=c1>// Be warned that Symbolication knows the layout of this structure.
+</span><span class=c1></span>    <span class=n>uint32_t</span> <span class=n>flags</span><span class=p>;</span>
+    <span class=n>uint16_t</span> <span class=n>witness</span><span class=p>;</span>
+<span class=cp>#if SUPPORT_INDEXED_ISA
+</span><span class=cp></span>    <span class=n>uint16_t</span> <span class=n>index</span><span class=p>;</span>
+<span class=cp>#endif
+</span><span class=cp></span>
+    <span class=n>explicit_atomic</span><span class=o>&lt;</span><span class=n>uintptr_t</span><span class=o>&gt;</span> <span class=n>ro_or_rw_ext</span><span class=p>;</span>
+
+    <span class=kt>Class</span> <span class=n>firstSubclass</span><span class=p>;</span>
+    <span class=kt>Class</span> <span class=n>nextSiblingClass</span><span class=p>;</span>
+
+<span class=nl>private</span><span class=p>:</span>
+    <span class=n>using</span> <span class=n>ro_or_rw_ext_t</span> <span class=o>=</span> <span class=n>objc</span><span class=o>::</span><span class=n>PointerUnion</span><span class=o>&lt;</span><span class=k>const</span> <span class=n>class_ro_t</span> <span class=o>*</span><span class=p>,</span> <span class=n>class_rw_ext_t</span> <span class=o>*&gt;</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div><p><code>class_rw_ext_t</code>的定义</p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=k>struct</span> <span class=n>class_rw_ext_t</span> <span class=p>{</span>
+    <span class=k>const</span> <span class=n>class_ro_t</span> <span class=o>*</span><span class=n>ro</span><span class=p>;</span>
+    <span class=n>method_array_t</span> <span class=n>methods</span><span class=p>;</span>
+    <span class=n>property_array_t</span> <span class=n>properties</span><span class=p>;</span>
+    <span class=n>protocol_array_t</span> <span class=n>protocols</span><span class=p>;</span>
+    <span class=kt>char</span> <span class=o>*</span><span class=n>demangledName</span><span class=p>;</span>
+    <span class=n>uint32_t</span> <span class=n>version</span><span class=p>;</span>
+<span class=p>};</span>
+</code></pre></div><p><code>class_ro_t</code>的定义</p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=k>struct</span> <span class=n>class_ro_t</span> <span class=p>{</span>
+    <span class=n>uint32_t</span> <span class=n>flags</span><span class=p>;</span>
+    <span class=n>uint32_t</span> <span class=n>instanceStart</span><span class=p>;</span>
+    <span class=n>uint32_t</span> <span class=n>instanceSize</span><span class=p>;</span>
+<span class=cp>#ifdef __LP64__
+</span><span class=cp></span>    <span class=n>uint32_t</span> <span class=n>reserved</span><span class=p>;</span>
+<span class=cp>#endif
+</span><span class=cp></span>
+    <span class=k>const</span> <span class=n>uint8_t</span> <span class=o>*</span> <span class=n>ivarLayout</span><span class=p>;</span>
+    
+    <span class=k>const</span> <span class=kt>char</span> <span class=o>*</span> <span class=n>name</span><span class=p>;</span>
+    <span class=n>method_list_t</span> <span class=o>*</span> <span class=n>baseMethodList</span><span class=p>;</span>
+    <span class=n>protocol_list_t</span> <span class=o>*</span> <span class=n>baseProtocols</span><span class=p>;</span>
+    <span class=k>const</span> <span class=n>ivar_list_t</span> <span class=o>*</span> <span class=n>ivars</span><span class=p>;</span>
+
+    <span class=k>const</span> <span class=n>uint8_t</span> <span class=o>*</span> <span class=n>weakIvarLayout</span><span class=p>;</span>
+    <span class=n>property_list_t</span> <span class=o>*</span><span class=n>baseProperties</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div><p><img src=https://w-md.imzsy.design/image-20200916164750486.png alt=image-20200916164750486></p><p>在 objc_class 结构体中的注释写到 <code>class_data_bits_t</code>相当于 <code>class_rw_t</code>指针加上 <code>rr/alloc</code> 的标志。</p><p>同时，也向外面提供了便捷方法用于返回其中的 <code>class_rw_t *</code> 指针</p><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=n>class_rw_t</span> <span class=o>*</span><span class=nf>data</span><span class=p>()</span> <span class=k>const</span> <span class=p>{</span>
+    <span class=k>return</span> <span class=n>bits</span><span class=p>.</span><span class=n>data</span><span class=p>();</span>
+<span class=p>}</span>
+</code></pre></div><h3 id=类的属性方法协议><a href=#类的属性方法协议 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>类的属性、方法、协议</h3><p>Objc 类的属性、方法、以及遵循的协议都放在 class_rw_t 中，class_ro_t是一个指向常量的指针，存储由编译器决定的属性、方法和遵守的协议。<code>rw-readwrite, ro-readonly</code></p><p><strong>在编译期</strong></p><p>类的结构中的 <code>class_data_bits_t *data</code> 指向的是一个 <code>class_ro_t *</code>指针</p><p><strong>在运行时</strong></p><p>调用 <code>realizeClassWithoutSwift</code> 方法，会做一下 3 件事情：</p><ol><li>从<code>class_data_bits_t</code>调用 data 方法，将结果从 <code>class_rw_t</code> 强制转换为 <code>class_ro_t</code> 指针</li><li>初始化一个 class_rw_t 结构体</li><li>设置结构体 ro 的值以及 flag</li></ol><p>最后，调用 methodizeClass 方法，将类中的属性、协议、方法都加载进来。</p><h4 id=查看属性方法的分布><a href=#查看属性方法的分布 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>查看属性、方法的分布</h4><div class=highlight><pre class=chroma><code class=language-objective-c data-lang=objective-c><span class=k>@interface</span> <span class=nc>Person</span> : <span class=nc>NSObject</span>
+<span class=p>{</span>
+    <span class=n>NSString</span> <span class=o>*</span><span class=n>nickName</span><span class=p>;</span>
+<span class=p>}</span>
+<span class=k>@property</span> <span class=p>(</span><span class=k>nonatomic</span><span class=p>,</span> <span class=k>copy</span><span class=p>)</span> <span class=n>NSString</span> <span class=o>*</span><span class=n>name</span><span class=p>;</span>
+
+<span class=p>+</span> <span class=p>(</span><span class=kt>void</span><span class=p>)</span><span class=nf>walk</span><span class=p>;</span>
+<span class=p>-</span> <span class=p>(</span><span class=kt>void</span><span class=p>)</span><span class=nf>run</span><span class=p>;</span>
+<span class=k>@end</span>
+
+<span class=k>@implementation</span> <span class=nc>Person</span>
+<span class=p>+</span> <span class=p>(</span><span class=kt>void</span><span class=p>)</span><span class=nf>walk</span> <span class=p>{};</span>
+<span class=p>-</span> <span class=p>(</span><span class=kt>void</span><span class=p>)</span><span class=nf>run</span> <span class=p>{};</span>
+<span class=k>@end</span>
+</code></pre></div><p>上面我们已经知道了，<code>isa</code>与<code>bits</code>的内存偏移为 32 位，即<code>bits</code>的地址是<code>类的内存首地址</code>+<code>isa、superclass、cache 的内存长度</code></p><div class=highlight><pre class=chroma><code class=language-ruby data-lang=ruby><span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span><span class=o>/</span><span class=n>x</span> <span class=no>Person</span><span class=o>.</span><span class=n>class</span>
+<span class=p>(</span><span class=no>Class</span><span class=p>)</span> <span class=vg>$1</span> <span class=o>=</span> <span class=mh>0x0000000100003228</span> <span class=no>Person</span>
+<span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span> <span class=p>(</span><span class=n>class_data_bits_t</span> <span class=o>*</span><span class=p>)</span><span class=mh>0x0000000100003248</span>
+<span class=p>(</span><span class=n>class_data_bits_t</span> <span class=o>*</span><span class=p>)</span> <span class=vg>$2</span> <span class=o>=</span> <span class=mh>0x0000000100003248</span>
+</code></pre></div><p>根据<code>data()</code>方法，获取 <code>class_rw_t</code></p><div class=highlight><pre class=chroma><code class=language-ruby data-lang=ruby><span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span> <span class=vg>$2</span><span class=o>-&gt;</span><span class=n>data</span><span class=p>()</span>
+<span class=p>(</span><span class=n>class_rw_t</span> <span class=o>*</span><span class=p>)</span> <span class=vg>$4</span> <span class=o>=</span> <span class=mh>0x0000000101c46110</span>
+<span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span> <span class=o>*</span><span class=vg>$4</span>
+<span class=p>(</span><span class=n>class_rw_t</span><span class=p>)</span> <span class=vg>$5</span> <span class=o>=</span> <span class=p>{</span>
+  <span class=n>flags</span> <span class=o>=</span> <span class=mi>2148007936</span>
+  <span class=n>witness</span> <span class=o>=</span> <span class=mi>1</span>
+  <span class=n>ro_or_rw_ext</span> <span class=o>=</span> <span class=p>{</span>
+    <span class=n>std</span><span class=o>::</span><span class=n>__1</span><span class=o>::</span><span class=n>atomic</span><span class=o>&lt;</span><span class=n>unsigned</span> <span class=n>long</span><span class=o>&gt;</span> <span class=o>=</span> <span class=mi>4294979784</span>
+  <span class=p>}</span>
+  <span class=n>firstSubclass</span> <span class=o>=</span> <span class=kp>nil</span>
+  <span class=n>nextSiblingClass</span> <span class=o>=</span> <span class=no>NSUUID</span>
+<span class=p>}</span>
+</code></pre></div><blockquote><p>781 的源码和之前的源码不太一样，这里并不能直接读取到 methods、properties、protocols</p></blockquote><p><strong>类的属性</strong></p><div class=highlight><pre class=chroma><code class=language-ruby data-lang=ruby><span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span> <span class=vg>$5</span><span class=o>.</span><span class=n>properties</span><span class=p>()</span>
+<span class=p>(</span><span class=n>const</span> <span class=n>property_array_t</span><span class=p>)</span> <span class=vg>$13</span> <span class=o>=</span> <span class=p>{</span>
+  <span class=n>list_array_tt</span><span class=o>&lt;</span><span class=n>property_t</span><span class=p>,</span> <span class=n>property_list_t</span><span class=o>&gt;</span> <span class=o>=</span> <span class=p>{</span>
+     <span class=o>=</span> <span class=p>{</span>
+      <span class=n>list</span> <span class=o>=</span> <span class=mh>0x00000001000031c0</span>
+      <span class=n>arrayAndFlag</span> <span class=o>=</span> <span class=mi>4294980032</span>
+    <span class=p>}</span>
+  <span class=p>}</span>
+<span class=p>}</span>
+<span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span> <span class=vg>$13</span><span class=o>.</span><span class=n>list</span>
+<span class=p>(</span><span class=n>property_list_t</span> <span class=o>*</span><span class=n>const</span><span class=p>)</span> <span class=vg>$14</span> <span class=o>=</span> <span class=mh>0x00000001000031c0</span>
+<span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span> <span class=o>*</span><span class=vg>$14</span>
+<span class=p>(</span><span class=n>property_list_t</span><span class=p>)</span> <span class=vg>$15</span> <span class=o>=</span> <span class=p>{</span>
+  <span class=n>entsize_list_tt</span><span class=o>&lt;</span><span class=n>property_t</span><span class=p>,</span> <span class=n>property_list_t</span><span class=p>,</span> <span class=mi>0</span><span class=o>&gt;</span> <span class=o>=</span> <span class=p>{</span>
+    <span class=n>entsizeAndFlags</span> <span class=o>=</span> <span class=mi>16</span>
+    <span class=n>count</span> <span class=o>=</span> <span class=mi>1</span>
+    <span class=n>first</span> <span class=o>=</span> <span class=p>(</span><span class=nb>name</span> <span class=o>=</span> <span class=s2>&#34;name&#34;</span><span class=p>,</span> <span class=n>attributes</span> <span class=o>=</span> <span class=s2>&#34;T@</span><span class=se>\&#34;</span><span class=s2>NSString</span><span class=se>\&#34;</span><span class=s2>,C,N,V_name&#34;</span><span class=p>)</span>
+  <span class=p>}</span>
+<span class=p>}</span>
+
+<span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span> <span class=vg>$15</span><span class=o>.</span><span class=n>get</span><span class=p>(</span><span class=mi>0</span><span class=p>)</span>
+<span class=p>(</span><span class=n>property_t</span><span class=p>)</span> <span class=vg>$16</span> <span class=o>=</span> <span class=p>(</span><span class=nb>name</span> <span class=o>=</span> <span class=s2>&#34;name&#34;</span><span class=p>,</span> <span class=n>attributes</span> <span class=o>=</span> <span class=s2>&#34;T@</span><span class=se>\&#34;</span><span class=s2>NSString</span><span class=se>\&#34;</span><span class=s2>,C,N,V_name&#34;</span><span class=p>)</span>
+</code></pre></div><p>通过上面的方式，就可以拿到所想要 <code>property_t</code> 属性列表，其中 count 是指总共的属性数量。</p><p>之前，分析了成员变量存储在 <code>class_ro_t</code> 中，我们也来打印一下看看</p><div class=highlight><pre class=chroma><code class=language-ruby data-lang=ruby><span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span> <span class=vg>$5</span><span class=o>.</span><span class=n>ro</span><span class=p>()</span>
+<span class=p>(</span><span class=n>const</span> <span class=n>class_ro_t</span> <span class=o>*</span><span class=p>)</span> <span class=vg>$18</span> <span class=o>=</span> <span class=mh>0x00000001000030c8</span>
+<span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span> <span class=o>*</span><span class=vg>$18</span>
+<span class=p>(</span><span class=n>const</span> <span class=n>class_ro_t</span><span class=p>)</span> <span class=vg>$19</span> <span class=o>=</span> <span class=p>{</span>
+  <span class=n>flags</span> <span class=o>=</span> <span class=mi>388</span>
+  <span class=n>instanceStart</span> <span class=o>=</span> <span class=mi>8</span>
+  <span class=n>instanceSize</span> <span class=o>=</span> <span class=mi>24</span>
+  <span class=n>reserved</span> <span class=o>=</span> <span class=mi>0</span>
+  <span class=n>ivarLayout</span> <span class=o>=</span> <span class=mh>0x0000000100001e6f</span> <span class=s2>&#34;</span><span class=se>\x02</span><span class=s2>&#34;</span>
+  <span class=nb>name</span> <span class=o>=</span> <span class=mh>0x0000000100001e68</span> <span class=s2>&#34;Person&#34;</span>
+  <span class=n>baseMethodList</span> <span class=o>=</span> <span class=mh>0x0000000100003110</span>
+  <span class=n>baseProtocols</span> <span class=o>=</span> <span class=mh>0x0000000000000000</span>
+  <span class=n>ivars</span> <span class=o>=</span> <span class=mh>0x0000000100003178</span>
+  <span class=n>weakIvarLayout</span> <span class=o>=</span> <span class=mh>0x0000000000000000</span>
+  <span class=n>baseProperties</span> <span class=o>=</span> <span class=mh>0x00000001000031c0</span>
+  <span class=n>_swiftMetadataInitializer_NEVER_USE</span> <span class=o>=</span> <span class=p>{}</span>
+<span class=p>}</span>
+</code></pre></div><p>接着，打印 <code>ivars</code></p><div class=highlight><pre class=chroma><code class=language-ruby data-lang=ruby><span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span> <span class=vg>$19</span><span class=o>.</span><span class=n>ivars</span>
+<span class=p>(</span><span class=n>const</span> <span class=n>ivar_list_t</span> <span class=o>*</span><span class=n>const</span><span class=p>)</span> <span class=vg>$20</span> <span class=o>=</span> <span class=mh>0x0000000100003178</span>
+<span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span> <span class=o>*</span><span class=vg>$20</span>
+<span class=p>(</span><span class=n>const</span> <span class=n>ivar_list_t</span><span class=p>)</span> <span class=vg>$21</span> <span class=o>=</span> <span class=p>{</span>
+  <span class=n>entsize_list_tt</span><span class=o>&lt;</span><span class=n>ivar_t</span><span class=p>,</span> <span class=n>ivar_list_t</span><span class=p>,</span> <span class=mi>0</span><span class=o>&gt;</span> <span class=o>=</span> <span class=p>{</span>
+    <span class=n>entsizeAndFlags</span> <span class=o>=</span> <span class=mi>32</span>
+    <span class=n>count</span> <span class=o>=</span> <span class=mi>2</span>
+    <span class=n>first</span> <span class=o>=</span> <span class=p>{</span>
+      <span class=n>offset</span> <span class=o>=</span> <span class=mh>0x00000001000031f0</span>
+      <span class=nb>name</span> <span class=o>=</span> <span class=mh>0x0000000100001e76</span> <span class=s2>&#34;nickName&#34;</span>
+      <span class=n>type</span> <span class=o>=</span> <span class=mh>0x0000000100001ebe</span> <span class=s2>&#34;@</span><span class=se>\&#34;</span><span class=s2>NSString</span><span class=se>\&#34;</span><span class=s2>&#34;</span>
+      <span class=n>alignment_raw</span> <span class=o>=</span> <span class=mi>3</span>
+      <span class=n>size</span> <span class=o>=</span> <span class=mi>8</span>
+    <span class=p>}</span>
+  <span class=p>}</span>
+<span class=p>}</span>
+</code></pre></div><p>同样的，输出每一个<code>ivar_list</code>的每一个元素</p><div class=highlight><pre class=chroma><code class=language-ruby data-lang=ruby><span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span> <span class=vg>$21</span><span class=o>.</span><span class=n>get</span><span class=p>(</span><span class=mi>0</span><span class=p>)</span>
+<span class=p>(</span><span class=n>ivar_t</span><span class=p>)</span> <span class=vg>$22</span> <span class=o>=</span> <span class=p>{</span>
+  <span class=n>offset</span> <span class=o>=</span> <span class=mh>0x00000001000031f0</span>
+  <span class=nb>name</span> <span class=o>=</span> <span class=mh>0x0000000100001e76</span> <span class=s2>&#34;nickName&#34;</span>
+  <span class=n>type</span> <span class=o>=</span> <span class=mh>0x0000000100001ebe</span> <span class=s2>&#34;@</span><span class=se>\&#34;</span><span class=s2>NSString</span><span class=se>\&#34;</span><span class=s2>&#34;</span>
+  <span class=n>alignment_raw</span> <span class=o>=</span> <span class=mi>3</span>
+  <span class=n>size</span> <span class=o>=</span> <span class=mi>8</span>
+<span class=p>}</span>
+<span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span> <span class=vg>$21</span><span class=o>.</span><span class=n>get</span><span class=p>(</span><span class=mi>1</span><span class=p>)</span>
+<span class=p>(</span><span class=n>ivar_t</span><span class=p>)</span> <span class=vg>$23</span> <span class=o>=</span> <span class=p>{</span>
+  <span class=n>offset</span> <span class=o>=</span> <span class=mh>0x00000001000031f8</span>
+  <span class=nb>name</span> <span class=o>=</span> <span class=mh>0x0000000100001e7f</span> <span class=s2>&#34;_name&#34;</span>
+  <span class=n>type</span> <span class=o>=</span> <span class=mh>0x0000000100001ebe</span> <span class=s2>&#34;@</span><span class=se>\&#34;</span><span class=s2>NSString</span><span class=se>\&#34;</span><span class=s2>&#34;</span>
+  <span class=n>alignment_raw</span> <span class=o>=</span> <span class=mi>3</span>
+  <span class=n>size</span> <span class=o>=</span> <span class=mi>8</span>
+<span class=p>}</span>
+</code></pre></div><p>除了成员变量 nickName 之外，编译器会在底层自动将属性生成一个成员变量（前缀_+属性名）</p><p><strong>类的方法</strong></p><p>查看源码，关于 <code>class_rw_t</code> 部分，知道通过<code>methods()、properties()、protocols()</code>分别获取方法、属性、协议</p><div class=highlight><pre class=chroma><code class=language-ruby data-lang=ruby><span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span> <span class=vg>$5</span><span class=o>.</span><span class=n>methods</span><span class=p>()</span>
+<span class=p>(</span><span class=n>const</span> <span class=n>method_array_t</span><span class=p>)</span> <span class=vg>$6</span> <span class=o>=</span> <span class=p>{</span>
+  <span class=n>list_array_tt</span><span class=o>&lt;</span><span class=n>method_t</span><span class=p>,</span> <span class=n>method_list_t</span><span class=o>&gt;</span> <span class=o>=</span> <span class=p>{</span>
+     <span class=o>=</span> <span class=p>{</span>
+      <span class=n>list</span> <span class=o>=</span> <span class=mh>0x0000000100003110</span>
+      <span class=n>arrayAndFlag</span> <span class=o>=</span> <span class=mi>4294979856</span>
+    <span class=p>}</span>
+  <span class=p>}</span>
+<span class=p>}</span>
+
+<span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span> <span class=vg>$6</span><span class=o>.</span><span class=n>list</span>
+<span class=p>(</span><span class=n>method_list_t</span> <span class=o>*</span><span class=n>const</span><span class=p>)</span> <span class=vg>$7</span> <span class=o>=</span> <span class=mh>0x0000000100003110</span>
+<span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span> <span class=vg>$7</span>
+<span class=p>(</span><span class=n>method_list_t</span> <span class=o>*</span><span class=n>const</span><span class=p>)</span> <span class=vg>$7</span> <span class=o>=</span> <span class=mh>0x0000000100003110</span>
+<span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span> <span class=o>*</span><span class=vg>$7</span>
+<span class=p>(</span><span class=n>method_list_t</span><span class=p>)</span> <span class=vg>$8</span> <span class=o>=</span> <span class=p>{</span>
+  <span class=n>entsize_list_tt</span><span class=o>&lt;</span><span class=n>method_t</span><span class=p>,</span> <span class=n>method_list_t</span><span class=p>,</span> <span class=mi>3</span><span class=o>&gt;</span> <span class=o>=</span> <span class=p>{</span>
+    <span class=n>entsizeAndFlags</span> <span class=o>=</span> <span class=mi>26</span>
+    <span class=n>count</span> <span class=o>=</span> <span class=mi>4</span>
+    <span class=n>first</span> <span class=o>=</span> <span class=p>{</span>
+      <span class=nb>name</span> <span class=o>=</span> <span class=s2>&#34;.cxx_destruct&#34;</span>
+      <span class=n>types</span> <span class=o>=</span> <span class=mh>0x0000000100001eb6</span> <span class=s2>&#34;v16@0:8&#34;</span>
+      <span class=n>imp</span> <span class=o>=</span> <span class=mh>0x0000000100001970</span> <span class=p>(</span><span class=no>ObjcTest</span><span class=sb>`-[Person .cxx_destruct] at main.m:29)
+</span><span class=sb>    }
+</span><span class=sb>  }
+</span><span class=sb>}
+</span></code></pre></div><p>通过上面的方式，就可以拿到所想要 <code>method_list</code> 方法列表，其中 count 是指总共的方法数量，分别打印一下</p><div class=highlight><pre class=chroma><code class=language-ruby data-lang=ruby><span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span> <span class=vg>$8</span><span class=o>.</span><span class=n>get</span><span class=p>(</span><span class=mi>0</span><span class=p>)</span>
+<span class=p>(</span><span class=n>method_t</span><span class=p>)</span> <span class=vg>$9</span> <span class=o>=</span> <span class=p>{</span>
+  <span class=nb>name</span> <span class=o>=</span> <span class=s2>&#34;.cxx_destruct&#34;</span>
+  <span class=n>types</span> <span class=o>=</span> <span class=mh>0x0000000100001eb6</span> <span class=s2>&#34;v16@0:8&#34;</span>
+  <span class=n>imp</span> <span class=o>=</span> <span class=mh>0x0000000100001970</span> <span class=p>(</span><span class=no>ObjcTest</span><span class=sb>`-[Person .cxx_destruct] at main.m:29)
+</span><span class=sb>}
+</span><span class=sb>(lldb) p $8.get(1)
+</span><span class=sb>(method_t) $10 = {
+</span><span class=sb>  name = &#34;name&#34;
+</span><span class=sb>  types = 0x0000000100001eca &#34;@16@0:8&#34;
+</span><span class=sb>  imp = 0x0000000100001910 (ObjcTest`</span><span class=o>-[</span><span class=no>Person</span> <span class=nb>name</span><span class=o>]</span> <span class=n>at</span> <span class=n>main</span><span class=o>.</span><span class=n>m</span><span class=p>:</span><span class=mi>16</span><span class=p>)</span>
+<span class=p>}</span>
+<span class=p>(</span><span class=n>lldb</span><span class=p>)</span> <span class=nb>p</span> <span class=vg>$8</span><span class=o>.</span><span class=n>get</span><span class=p>(</span><span class=mi>2</span><span class=p>)</span>
+<span class=p>(</span><span class=n>method_t</span><span class=p>)</span> <span class=vg>$11</span> <span class=o>=</span> <span class=p>{</span>
+  <span class=nb>name</span> <span class=o>=</span> <span class=s2>&#34;setName:&#34;</span>
+  <span class=n>types</span> <span class=o>=</span> <span class=mh>0x0000000100001ed2</span> <span class=s2>&#34;v24@0:8@16&#34;</span>
+  <span class=n>imp</span> <span class=o>=</span> <span class=mh>0x0000000100001940</span> <span class=p>(</span><span class=no>ObjcTest</span><span class=sb>`-[Person setName:] at main.m:16)
+</span><span class=sb>}
+</span><span class=sb>(lldb) p $8.get(3)
+</span><span class=sb>(method_t) $12 = {
+</span><span class=sb>  name = &#34;run&#34;
+</span><span class=sb>  types = 0x0000000100001eb6 &#34;v16@0:8&#34;
+</span><span class=sb>  imp = 0x0000000100001900 (ObjcTest`</span><span class=o>-[</span><span class=no>Person</span> <span class=n>run</span><span class=o>]</span> <span class=n>at</span> <span class=n>main</span><span class=o>.</span><span class=n>m</span><span class=p>:</span><span class=mi>31</span><span class=p>)</span>
+<span class=p>}</span>
+</code></pre></div><p>方法<code>method_t</code>的定义</p><div class=highlight><pre class=chroma><code class=language-objectivec data-lang=objectivec><span class=k>struct</span> <span class=n>method_t</span> <span class=p>{</span>
+    <span class=kt>SEL</span> <span class=n>name</span><span class=p>;</span>
+    <span class=k>const</span> <span class=kt>char</span> <span class=o>*</span><span class=n>types</span><span class=p>;</span>
+    <span class=kt>IMP</span> <span class=n>imp</span><span class=p>;</span>
+
+    <span class=k>struct</span> <span class=nl>SortBySELAddress</span> <span class=p>:</span>
+        <span class=n>public</span> <span class=n>std</span><span class=o>::</span><span class=n>binary_function</span><span class=o>&lt;</span><span class=k>const</span> <span class=n>method_t</span><span class=o>&amp;</span><span class=p>,</span>
+                                    <span class=k>const</span> <span class=n>method_t</span><span class=o>&amp;</span><span class=p>,</span> <span class=kt>bool</span><span class=o>&gt;</span>
+    <span class=p>{</span>
+        <span class=kt>bool</span> <span class=n>operator</span><span class=p>()</span> <span class=p>(</span><span class=k>const</span> <span class=n>method_t</span><span class=o>&amp;</span> <span class=n>lhs</span><span class=p>,</span>
+                         <span class=k>const</span> <span class=n>method_t</span><span class=o>&amp;</span> <span class=n>rhs</span><span class=p>)</span>
+        <span class=p>{</span> <span class=k>return</span> <span class=n>lhs</span><span class=p>.</span><span class=n>name</span> <span class=o>&lt;</span> <span class=n>rhs</span><span class=p>.</span><span class=n>name</span><span class=p>;</span> <span class=p>}</span>
+    <span class=p>};</span>
+<span class=p>};</span>
+</code></pre></div><p>里面包含3个成员变量。</p><ul><li>SEL是方法的名字name</li><li>types是Type Encoding类型编码，类型可参考<a href=https://developer.apple.com/library/content/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html target=_blank rel=noopener>Type Encoding</a>，在此不细说</li><li>IMP是一个函数指针，指向的是函数的具体实现</li></ul><blockquote><p>在runtime中消息传递和转发的目的就是为了找到IMP，并执行函数</p></blockquote><p>系统在底层会添加 c++的<code>.cxx_destruct</code>方法，同时编译器还为属性生成了一个 <code>setter</code> 方法和 <code>getter</code> 方法，现在会有一个疑问：Person的类方法 walk 去哪里了？</p><p>在上面，已经有介绍关于类和元类的概念，那么对于类方法的归属：<strong><code>类方法</code>可以理解成<code>元类</code>的<code>实例方法</code></strong>，因此，类方法存储<code>元类</code>中</p><h3 id=总结><a href=#总结 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>总结</h3><ul><li>成员变量存放在<code>ivar</code></li><li>属性存放在<code>property</code>，同时也会存一份在<code>ivar</code>，并生成<code>setter</code>、<code>getter</code>方法</li><li>实例方法存放在<code>类</code>里面<code>methods</code></li><li>类方法存放在<code>元类</code>里面<code>methods</code></li></ul><blockquote><p>参考资料：</p><p><a href=https://github.com/draveness/analyze/blob/master/contents/objc/%E6%B7%B1%E5%85%A5%E8%A7%A3%E6%9E%90%20ObjC%20%E4%B8%AD%E6%96%B9%E6%B3%95%E7%9A%84%E7%BB%93%E6%9E%84.md#%E6%B7%B1%E5%85%A5%E8%A7%A3%E6%9E%90-objc-%E4%B8%AD%E6%96%B9%E6%B3%95%E7%9A%84%E7%BB%93%E6%9E%84 target=_blank rel=noopener>深入解析 ObjC 中方法的结构</a></p></blockquote></div></article><div class=post-tags><a href=../tags/ios/ rel=tag class=post-tags-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon tag-icon"><path d="M0 252.118V48C0 21.49 21.49.0 48 0h204.118a48 48 0 0133.941 14.059l211.882 211.882c18.745 18.745 18.745 49.137.0 67.882L293.823 497.941c-18.745 18.745-49.137 18.745-67.882.0L14.059 286.059A48 48 0 010 252.118zM112 64c-26.51.0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48z"/></svg>iOS</a></div></div></main><div id=back-to-top class=back-to-top><a href=#><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="icon arrow-up"><path d="M34.9 289.5l-22.2-22.2c-9.4-9.4-9.4-24.6.0-33.9L207 39c9.4-9.4 24.6-9.4 33.9.0l194.3 194.3c9.4 9.4 9.4 24.6.0 33.9L413 289.4c-9.5 9.5-25 9.3-34.3-.4L264 168.6V456c0 13.3-10.7 24-24 24h-32c-13.3.0-24-10.7-24-24V168.6L69.2 289.1c-9.3 9.8-24.8 10-34.3.4z"/></svg></a></div><footer id=footer class=footer><div class=footer-inner><div class=site-info>©&nbsp;2019–2021&nbsp;<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon footer-icon"><path d="M462.3 62.6C407.5 15.9 326 24.3 275.7 76.2L256 96.5l-19.7-20.3C186.1 24.3 104.5 15.9 49.7 62.6c-62.8 53.6-66.1 149.8-9.9 207.9l193.5 199.8c12.5 12.9 32.8 12.9 45.3.0l193.5-199.8c56.3-58.1 53-154.3-9.8-207.9z"/></svg>&nbsp;Dev - jw</div></div></footer></div><script>'serviceWorker'in navigator&&window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js')})</script><script>typeof MathJax=='undefined'?(window.MathJax={loader:{load:['[tex]/mhchem']},options:{renderActions:{addMenu:[0,'','']}},tex:{inlineMath:{'[+]':[['$','$']]},tags:'ams',packages:{'[+]':['mhchem']}}},function(){var a=document.createElement('script');a.src='https://cdn.jsdelivr.net/npm/mathjax@3.1.2/es5/tex-mml-chtml.js',a.defer=!0,document.head.appendChild(a)}()):(MathJax.texReset(),MathJax.typeset())</script><script src=https://cdn.jsdelivr.net/npm/mermaid@8.8.3/dist/mermaid.min.js></script><script>let mermaidConfig={startOnLoad:!0,flowchart:{useMaxWidth:!1,htmlLabels:!0},theme:'default'};mermaid.initialize(mermaidConfig)</script><script src=https://cdn.jsdelivr.net/npm/medium-zoom@latest/dist/medium-zoom.min.js></script><script>mediumZoom(document.querySelectorAll('div.post-body img'),{background:'hsla(var(--color-bg-h), var(--color-bg-s), var(--color-bg-l), 0.95)'})</script><script src=https://cdn.jsdelivr.net/npm/instant.page@5.1.0/instantpage.min.js type=module defer></script></body></html>

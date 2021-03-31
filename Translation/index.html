@@ -1,0 +1,136 @@
+<!doctype html><html lang=zh-cn><head prefix="og: http://ogp.me/ns# article: http://ogp.me/ns/article#"><meta charset=utf-8><meta name=generator content="Hugo 0.82.0"><meta name=theme-color content="#fff"><meta name=viewport content="width=device-width,initial-scale=1"><meta name=format-detection content="telephone=no, date=no, address=no, email=no"><meta http-equiv=cache-control content="no-transform"><meta http-equiv=cache-control content="no-siteapp"><title>OpenGL系列-变换和矩阵栈 | Dev - jw</title><link rel=stylesheet href=../css/meme.min.ae509b8259cb6c090411be6371211f6bb00631055ec9b68a994f27bb5f5f5f76.css><script src=../js/meme.min.3a56ecbb4ec7b23a805fc0116d4dac9095813dfd877cd8379675a8bdac538ffe.js></script><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400;1,700&family=Noto+Serif+SC:wght@400;500;700&family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap" media=print onload="this.media='all'"><noscript><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400;1,700&family=Noto+Serif+SC:wght@400;500;700&family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap"></noscript><meta name=author content="Dev - jw"><meta name=description content="变换 在OpenGL 下，对一个物体进行位移、旋转、缩放等操作，我们一般使用矩阵(Mat……"><link rel="shortcut icon" href=../favicon.ico type=image/x-icon><link rel=mask-icon href=../icons/safari-pinned-tab.svg color=#2a6df4><link rel=apple-touch-icon sizes=180x180 href=../icons/apple-touch-icon.png><meta name=apple-mobile-web-app-capable content="yes"><meta name=apple-mobile-web-app-title content="Dev - jw"><meta name=apple-mobile-web-app-status-bar-style content="black"><meta name=mobile-web-app-capable content="yes"><meta name=application-name content="Dev - jw"><meta name=msapplication-starturl content="../"><meta name=msapplication-TileColor content="#fff"><meta name=msapplication-TileImage content="../icons/mstile-150x150.png"><link rel=manifest href=../manifest.json><link rel=canonical href=https://dev.hjw.best/Translation/><script type=application/ld+json>{"@context":"https://schema.org","@type":"WebPage","datePublished":"2020-07-12T08:40:20+08:00","dateModified":"2021-03-31T15:42:56+08:00","url":"https://dev.hjw.best/Translation/","name":"OpenGL系列-变换和矩阵栈","description":"变换 在OpenGL 下，对一个物体进行位移、旋转、缩放等操作，我们一般使用矩阵(Mat……","image":"https://dev.hjw.best/favicon.ico","license":"Copyright","publisher":{"@type":"Organization","name":"Dev - jw","logo":{"@type":"ImageObject","url":"https://dev.hjw.best/favicon.ico"},"url":"https://dev.hjw.best/"},"mainEntityOfPage":{"@type":"WebSite","@id":"https://dev.hjw.best/"}}</script><meta name=twitter:card content="summary"><meta property="og:title" content="OpenGL系列-变换和矩阵栈"><meta property="og:description" content="变换 在OpenGL 下，对一个物体进行位移、旋转、缩放等操作，我们一般使用矩阵(Mat……"><meta property="og:url" content="https://dev.hjw.best/Translation/"><meta property="og:site_name" content="Dev - jw"><meta property="og:locale" content="zh"><meta property="og:image" content="https://dev.hjw.best/favicon.ico"><meta property="og:type" content="website"><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=Lato:wght@700&text=reuixiy&display=swap" media=print onload="this.media='all'"><noscript><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=Lato:wght@700&text=reuixiy&display=swap"></noscript><meta name=baidu-site-verification content="5nzYjT6RG7"></head><body><div class=container><header class=header><div class=header-wrapper><div class="header-inner single"><div class=site-brand><a href=../ class=brand>Dev - jw</a></div><nav class=nav><ul class=menu id=menu><li class=menu-item><a href=../about><span class=menu-item-name>关于</span></a></li><li class=menu-item><a id=theme-switcher href=#><span class="icon theme-icon-light">🌞</span><span class="icon theme-icon-dark">🌙</span></a></li></ul></nav></div></div><input type=checkbox id=nav-toggle aria-hidden=true>
+<label for=nav-toggle class=nav-toggle></label><label for=nav-toggle class=nav-curtain></label></header><main class="main single" id=main><div class=main-inner><article class="content post h-entry" data-align=default data-type=posts data-toc-num=true><h1 class="post-title p-name">OpenGL系列-变换和矩阵栈</h1><div class=post-meta><time datetime=2020-07-12T08:40:20+08:00 class="post-meta-item published dt-published"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="icon post-meta-icon"><path d="M148 288h-40c-6.6.0-12-5.4-12-12v-40c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v40c0 6.6-5.4 12-12 12zm108-12v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm96 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm-96 96v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm-96 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm192 0v-40c0-6.6-5.4-12-12-12h-40c-6.6.0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h40c6.6.0 12-5.4 12-12zm96-260v352c0 26.5-21.5 48-48 48H48c-26.5.0-48-21.5-48-48V112c0-26.5 21.5-48 48-48h48V12c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v52h128V12c0-6.6 5.4-12 12-12h40c6.6.0 12 5.4 12 12v52h48c26.5.0 48 21.5 48 48zm-48 346V160H48v298c0 3.3 2.7 6 6 6h340c3.3.0 6-2.7 6-6z"/></svg>&nbsp;2020-07-12</time></div><div class="post-body e-content"><h3 id=变换><a href=#变换 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>变换</h3><p>在OpenGL 下，对一个物体进行位移、旋转、缩放等操作，我们一般使用<strong>矩阵</strong>(Matrix)对象去操作物体。</p><p>在深入了解变换矩阵之前，我们首先要了解一下向量。</p><h4 id=向量><a href=#向量 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>向量</h4><p>向量最基本的定义就是一个方向。即向量有一个方向和大小。</p><p>向量可以在任意维度上，如果一个向量有 2 个维度，它表示一个平面的方向，当它有 3 个维度的时候，则可以表示一个 3D 世界的方向。</p><p>通常，向量表示为：</p><div>$$
+\vec v =
+\left(
+\begin{matrix}
+x \\
+y \\
+z \\
+w
+\end{matrix}
+\right)
+$$</div><p>标量只是一个数字（或者说是仅有一个分量的向量）。</p><p>当向量与标量进行运算时，会像这样：</p><div>$$
+\left(
+\begin{matrix}
+1 \\
+2 \\
+3 \\
+w
+\end{matrix}
+\right) + x =
+\left(
+\begin{matrix}
+1 + x \\
+2 + x \\
+3 + x \\
+w + x
+\end{matrix}
+\right)
+$$</div><blockquote><p>其中的 <code>+</code> 可以是加减乘除</p></blockquote><p><strong>向量相乘</strong></p><p>普通的乘法在向量上是没有定义的，因为它在视觉上是没有意义的。但是在相乘的时候我们有两种特定情况可以选择：</p><ul><li><strong>点乘</strong>，记作 $\vec v \cdot \vec k$</li><li><strong>叉乘</strong>，记作 $\vec v \times \vec k$</li></ul><p><strong>向量点乘</strong></p><p>点乘的几何意义是可以用来计算两个向量之间的夹角，以及 b 向量在 a 向量方向上的投影</p><p>公式为：（具体的推导过程，不在这里展开）</p><div>$$
+a \cdot b = |a||b|cos\theta
+$$</div><p><strong>向量叉乘</strong></p><p>叉乘的结果是一个向量，更为熟知的叫法是<strong>法向量</strong>，该向量垂直于 a 和 b 向量构成的平面。</p><p>在 3D 图像学中，通过两个向量的叉乘，生成的是垂直于 a、b 的法向量，从而构建 x、y、z 坐标系</p><p>两个正交向量 A 和 B 叉积：</p><div>$$
+\left(
+\begin{matrix}
+A_x \\
+A_y \\
+A_z \\
+\end{matrix}
+\right) \times
+\left(
+\begin{matrix}
+B_x \\
+B_y \\
+B_z \\
+\end{matrix}
+\right) =
+\left(
+\begin{matrix}
+A_y \cdot B_z - A_z \cdot B_y \\
+A_z \cdot B_x - A_x \cdot B_z \\
+A_x \cdot B_y - A_y \cdot B_x \\
+\end{matrix}
+\right)
+$$</div><h4 id=矩阵><a href=#矩阵 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>矩阵</h4><p>矩阵就是一个矩形的数字、符号或表达式数组，就是一个矩形的数学表达式阵列。</p><p><strong>矩阵的数乘</strong></p><p>矩阵与标量之间的乘法</p><div>$$
+\left[
+\begin{matrix}
+1 & 2 \\
+     3 & 4 \\
+    \end{matrix}
+\right] \cdot 2 =
+\left[
+\begin{matrix}
+1 \cdot 2 & 2 \cdot 2 \\
+     3 \cdot 2 & 4 \cdot 2 \\
+\end{matrix}
+\right] =
+\left[
+\begin{matrix}
+2 & 4 \\
+     6 & 8 \\
+    \end{matrix}
+\right]
+$$</div><p><strong>矩阵相乘</strong></p><p>矩阵之间的相乘，有一些限制：</p><ol><li>只有当左侧矩阵的列数和右侧矩阵的行数相等，两个矩阵才能相乘</li><li>矩阵相乘不遵守<strong>交换律</strong></li></ol><p>比如，下面两个 2*2 矩阵相乘的列子：</p><div>$$
+\left[
+\begin{matrix}
+1 & 2 \\
+     3 & 4 \\
+    \end{matrix}
+\right] \cdot
+\left[
+\begin{matrix}
+5 & 6 \\
+     7 & 8 \\
+    \end{matrix}
+\right] =
+\left[
+\begin{matrix}
+1 \cdot 5 + 2 \cdot 7 & 1 \cdot 6 + 2 \cdot 8 \\
+     3 \cdot 5 + 4 \cdot 7 & 3 \cdot 6 + 4 \cdot 8 \\
+    \end{matrix}
+\right] =
+\left[
+\begin{matrix}
+19 & 22 \\
+     43 & 50 \\
+    \end{matrix}
+\right]
+$$</div><h4 id=矩阵与向量相乘><a href=#矩阵与向量相乘 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>矩阵与向量相乘</h4><p>在 OpenGL 中，我们通常用向量来表示位置、颜色、纹理坐标。</p><p>我们可以把向量看作是 $N \times 1$ 矩阵，N 表示向量分量的个数。</p><p>这样便满足了，矩阵的列数等于向量的行数。</p><div>$$
+\left[
+\begin{matrix}
+1 & 0 & 0 & 0 \\
+   0 & 1 & 0 & 0 \\
+0 & 0 & 1 & 0 \\
+   0 & 0 & 0 & 1 \\
+\end{matrix}
+\right] \times
+\left[
+\begin{matrix}
+x \\
+y \\
+z \\
+1 \\
+\end{matrix}
+\right] =
+\left[
+\begin{matrix}
+x \\
+y \\
+z \\
+1 \\
+\end{matrix}
+\right]
+$$</div><p><strong>单位矩阵</strong></p><p>在 OpenGL 中，我们通常使用 $4 \times 4$ 的<strong>变换矩阵</strong>，这是因为大部分的向量都是 4分量的。</p><p>单位矩阵是一个除了对角线以外都是 0 的 $N \times N$ 矩阵。</p><div>$$
+\left[
+\begin{matrix}
+1 & 0 & 0 & 0 \\
+   0 & 1 & 0 & 0 \\
+0 & 0 & 1 & 0 \\
+   0 & 0 & 0 & 1 \\
+\end{matrix}
+\right]
+$$</div><blockquote><p>单位矩阵是生成其他变换矩阵的起点</p></blockquote><ul><li><p>在数学中为了方便计算，矩阵是以<strong>行矩阵</strong>为标准，根据以下过程相乘：</p><p><strong>顶点坐标 = 顶点坐标 · 模型矩阵 · 观察矩阵 · 投影矩阵</strong></p></li></ul><p>$$
+Vec = \vec V_{local} \cdot M_{model} \cdot M_{view} \cdot M_{projection}
+$$</p><ul><li><p>在 OpenGL 中，矩阵都是以<strong>列矩阵</strong>为标准的，为了满足矩阵相乘的规则，需要将数学中的相乘过程按右往左相乘，即：</p><p><strong>顶点坐标 = 投影矩阵 · 观察矩阵 · 模型矩阵 · 顶点坐标</strong></p></li></ul><p>$$
+Vec = M_{projection} \cdot M_{view} \cdot M_{model} \cdot \vec V_{local}
+$$</p><h3 id=矩阵栈><a href=#矩阵栈 class=anchor-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon anchor-icon"><path d="M326.612 185.391c59.747 59.809 58.927 155.698.36 214.59-.11.12-.24.25-.36.37l-67.2 67.2c-59.27 59.27-155.699 59.262-214.96.0-59.27-59.26-59.27-155.7.0-214.96l37.106-37.106c9.84-9.84 26.786-3.3 27.294 10.606.648 17.722 3.826 35.527 9.69 52.721 1.986 5.822.567 12.262-3.783 16.612l-13.087 13.087c-28.026 28.026-28.905 73.66-1.155 101.96 28.024 28.579 74.086 28.749 102.325.51l67.2-67.19c28.191-28.191 28.073-73.757.0-101.83-3.701-3.694-7.429-6.564-10.341-8.569a16.037 16.037.0 01-6.947-12.606c-.396-10.567 3.348-21.456 11.698-29.806l21.054-21.055c5.521-5.521 14.182-6.199 20.584-1.731a152.482 152.482.0 0120.522 17.197zM467.547 44.449c-59.261-59.262-155.69-59.27-214.96.0l-67.2 67.2c-.12.12-.25.25-.36.37-58.566 58.892-59.387 154.781.36 214.59a152.454 152.454.0 0020.521 17.196c6.402 4.468 15.064 3.789 20.584-1.731l21.054-21.055c8.35-8.35 12.094-19.239 11.698-29.806a16.037 16.037.0 00-6.947-12.606c-2.912-2.005-6.64-4.875-10.341-8.569-28.073-28.073-28.191-73.639.0-101.83l67.2-67.19c28.239-28.239 74.3-28.069 102.325.51 27.75 28.3 26.872 73.934-1.155 101.96l-13.087 13.087c-4.35 4.35-5.769 10.79-3.783 16.612 5.864 17.194 9.042 34.999 9.69 52.721.509 13.906 17.454 20.446 27.294 10.606l37.106-37.106c59.271-59.259 59.271-155.699.001-214.959z"/></svg></a>矩阵栈</h3><p>OpenGL 中的变换一般包括<strong>视图变换</strong>、<strong>模型变换</strong>、<strong>投影变换</strong>等，在每次变换后，OpenGL 会记住新的状态。</p><p>但是，有时候在经过一些变换后，我们想回到原来的状态，便可以借助使用<strong>矩阵栈</strong>来回到原来的状态。</p><p><strong>过程分析</strong></p><p>首先，对于矩阵的操作都是对于矩阵栈的栈顶元素来操作的。</p><p>当前矩阵就是矩阵栈的栈顶元素。</p><p>整个过程如图：</p><p><img src=https://w-md.imzsy.design/image-20200715184213793.png alt=image-20200715184213793></p><ul><li>压栈 <code>PushMatrix()</code></li><li>取出当前矩阵，进行矩阵相乘 <code>MultMatrix()</code>（变换、缩放、旋转）</li><li>将结果压入矩阵栈</li><li>出栈 <code>PopMatrix()</code>，恢复到原来的状态</li></ul></div></article><div class=post-tags><a href=../tags/ios/ rel=tag class=post-tags-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon tag-icon"><path d="M0 252.118V48C0 21.49 21.49.0 48 0h204.118a48 48 0 0133.941 14.059l211.882 211.882c18.745 18.745 18.745 49.137.0 67.882L293.823 497.941c-18.745 18.745-49.137 18.745-67.882.0L14.059 286.059A48 48 0 010 252.118zM112 64c-26.51.0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48z"/></svg>iOS</a>
+<a href=../tags/opengl/ rel=tag class=post-tags-link><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon tag-icon"><path d="M0 252.118V48C0 21.49 21.49.0 48 0h204.118a48 48 0 0133.941 14.059l211.882 211.882c18.745 18.745 18.745 49.137.0 67.882L293.823 497.941c-18.745 18.745-49.137 18.745-67.882.0L14.059 286.059A48 48 0 010 252.118zM112 64c-26.51.0-48 21.49-48 48s21.49 48 48 48 48-21.49 48-48-21.49-48-48-48z"/></svg>OpenGL</a></div></div></main><div id=back-to-top class=back-to-top><a href=#><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="icon arrow-up"><path d="M34.9 289.5l-22.2-22.2c-9.4-9.4-9.4-24.6.0-33.9L207 39c9.4-9.4 24.6-9.4 33.9.0l194.3 194.3c9.4 9.4 9.4 24.6.0 33.9L413 289.4c-9.5 9.5-25 9.3-34.3-.4L264 168.6V456c0 13.3-10.7 24-24 24h-32c-13.3.0-24-10.7-24-24V168.6L69.2 289.1c-9.3 9.8-24.8 10-34.3.4z"/></svg></a></div><footer id=footer class=footer><div class=footer-inner><div class=site-info>©&nbsp;2019–2021&nbsp;<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon footer-icon"><path d="M462.3 62.6C407.5 15.9 326 24.3 275.7 76.2L256 96.5l-19.7-20.3C186.1 24.3 104.5 15.9 49.7 62.6c-62.8 53.6-66.1 149.8-9.9 207.9l193.5 199.8c12.5 12.9 32.8 12.9 45.3.0l193.5-199.8c56.3-58.1 53-154.3-9.8-207.9z"/></svg>&nbsp;Dev - jw</div></div></footer></div><script>'serviceWorker'in navigator&&window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js')})</script><script>typeof MathJax=='undefined'?(window.MathJax={loader:{load:['[tex]/mhchem']},options:{renderActions:{addMenu:[0,'','']}},tex:{inlineMath:{'[+]':[['$','$']]},tags:'ams',packages:{'[+]':['mhchem']}}},function(){var a=document.createElement('script');a.src='https://cdn.jsdelivr.net/npm/mathjax@3.1.2/es5/tex-mml-chtml.js',a.defer=!0,document.head.appendChild(a)}()):(MathJax.texReset(),MathJax.typeset())</script><script src=https://cdn.jsdelivr.net/npm/mermaid@8.8.3/dist/mermaid.min.js></script><script>let mermaidConfig={startOnLoad:!0,flowchart:{useMaxWidth:!1,htmlLabels:!0},theme:'default'};mermaid.initialize(mermaidConfig)</script><script src=https://cdn.jsdelivr.net/npm/medium-zoom@latest/dist/medium-zoom.min.js></script><script>mediumZoom(document.querySelectorAll('div.post-body img'),{background:'hsla(var(--color-bg-h), var(--color-bg-s), var(--color-bg-l), 0.95)'})</script><script src=https://cdn.jsdelivr.net/npm/instant.page@5.1.0/instantpage.min.js type=module defer></script></body></html>
